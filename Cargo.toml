@@ -1,0 +1,15 @@
+[package]
+name = "workingon"
+version = "0.0.1"
+description = "CLI to track what you're working on"
+authors = ["Mark Keller"]
+edition = "2021"
+license = "LICENSE"
+repository = "https://github.com/keller00/workingon"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.4.2", features = ["derive"] }
+dirs = "5.0.1"
