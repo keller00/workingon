@@ -13,3 +13,8 @@ readme = "README.md"
 [dependencies]
 clap = { version = "4.4.2", features = ["derive"] }
 dirs = "5.0.1"
+
+[dev-dependencies]
+assert_cmd = "2.0.14"
+predicates = "3.1.0"
+rstest = "0.21.0"
