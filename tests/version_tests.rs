@@ -4,9 +4,8 @@ use predicates::prelude::*;
 
 #[rstest]
 #[case("version")]
-// TODO: enable these tests once other version commands work
-// #[case("-V")]
-// #[case("--version")]
+#[case("-v")]
+#[case("--version")]
 fn test_version_command(#[case] command: &str) {
     Command::cargo_bin("workingon").unwrap()
     .args([
