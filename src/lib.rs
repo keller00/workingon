@@ -19,7 +19,7 @@ enum Commands {
     Version,
 }
 
-pub fn get_version_str() -> String {
+fn get_version_str() -> String {
     return format!("{} version {}", BIN, BIN_VERSION);
 }
 
@@ -27,6 +27,7 @@ fn print_version() {
     println!("{}", get_version_str());
 }
 
+// TODO: make this private?
 pub fn run_cli() {
     let cli = Cli::parse();
 
