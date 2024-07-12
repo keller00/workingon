@@ -30,8 +30,8 @@ struct Cli {
 enum Commands {
     /// Print version
     Version,
-    // TODO: hide this
     /// locate database file
+    #[clap(hide = true)]
     LocateDb,
 }
 
