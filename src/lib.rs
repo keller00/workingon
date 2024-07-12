@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use dirs::data_dir;
 
 const BIN: &str = env!("CARGO_PKG_NAME");
 const BIN_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -29,6 +30,9 @@ struct Cli {
 enum Commands {
     /// Print version
     Version,
+    // TODO: hide this
+    /// locate database file
+    LocateDb,
 }
 
 fn get_version_str() -> String {
@@ -39,6 +43,17 @@ fn print_version() {
     println!("{} {}", BIN, get_version_str());
 }
 
+fn get_db_file() -> std::path::PathBuf{
+    let mut db_file = data_dir().expect("Couldn't get data dir");
+    db_file.push("events.sqlite3");
+    return db_file
+
+}
+
+fn print_db_file() {
+    println!("{}", get_db_file().display())
+}
+
 // TODO: make this private?
 pub fn run_cli() {
     let cli = Cli::parse();
@@ -46,6 +61,9 @@ pub fn run_cli() {
     match &cli.command {
         Some(Commands::Version) => {
             print_version();
+        }
+        Some(Commands::LocateDb) => {
+            print_db_file();
         }
         None => {}
     }
