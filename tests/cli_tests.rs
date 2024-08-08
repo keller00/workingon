@@ -19,3 +19,19 @@ fn test_version_command(#[case] command: &str) {
         )
     );
 }
+
+
+#[rstest]
+fn test_locate_db() {
+    Command::cargo_bin("workingon").unwrap()
+    .args([
+        "locate-db",
+    ])
+    .assert()
+    .success()
+    .stdout(
+        predicate::str::ends_with(
+            "events.sqlite3\n",
+        )
+    );
+}
