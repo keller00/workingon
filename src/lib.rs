@@ -134,12 +134,13 @@ pub fn add_todo(title: Option<String>) {
     std::process::Command::new(get_editor()).arg(fp).status().expect("TODO: editing todoeditmsg file failed");
     let mut buf = String::new();
     std::fs::File::open(fp).expect("TODO: opening todoeditmsg for reading failed").read_to_string(&mut buf).expect("TODO: reading final todoeditmsg file failed");
+    std::fs::remove_file(fp).expect("todoeditmsg couldn't be removed once it was read");
     // TODO: maybe rename notes to body?
     let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
     let final_title = not_comments.next().expect("Couldn't find title of new TODO");
     let notes: Vec<&str> = not_comments.collect();
     let full_notes = notes.join("\n");
-    println!("read in {buf}");
+
     
     let connection = &mut establish_connection();
     // TODO: add id support
