@@ -31,7 +31,7 @@ fn test_locate_db() {
     .success()
     .stdout(
         predicate::str::ends_with(
-            "events.sqlite3\n",
+            "todos.sqlite3\n",
         )
     );
 }
