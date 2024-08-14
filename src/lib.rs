@@ -139,7 +139,8 @@ pub fn add_todo(title: Option<String>) {
     let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
     let final_title = not_comments.next().expect("Couldn't find title of new TODO");
     let notes: Vec<&str> = not_comments.collect();
-    let full_notes = notes.join("\n");
+    let mut full_notes = notes.join("\n");
+    full_notes = full_notes.trim_start_matches('\n').trim_end_matches('\n').to_string();
 
     
     let connection = &mut establish_connection();
@@ -162,7 +163,7 @@ pub fn list_todos(){
         .expect("Error loading posts");
     for post in results {
         println!("{}", post.title);
-        println!("-----------\n");
+        println!("-----------");
         println!("{}", post.notes);
     }
 }
