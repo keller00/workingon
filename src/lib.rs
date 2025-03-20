@@ -7,10 +7,10 @@ use self::schema::todos;
 
 use chrono::Utc;
 use clap::{Parser, Subcommand};
-use dirs::data_dir;
-use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
+use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use dirs::data_dir;
 use models::{NewTodo, Todos};
 use sqids::Sqids;
 
@@ -23,12 +23,11 @@ const DEFAULT_EDITOR: &str = "vi";
     disable_version_flag = true,
     disable_help_subcommand = true,
     author,
-    version=get_version_str(),
+    version = get_version_str(),
     about,
     long_about = None,
 )]
 struct Cli {
-
     #[command(subcommand)]
     command: Option<Commands>,
     #[arg(
@@ -92,27 +91,28 @@ fn print_version() {
 }
 
 // TODO: make this return a Path
-fn get_project_data_folder() -> std::path::PathBuf{
+fn get_project_data_folder() -> std::path::PathBuf {
     let mut data_folder = data_dir().expect("Couldn't get data dir");
     data_folder.push(BIN);
-    if ! data_folder.exists() {
-        std::fs::create_dir(data_folder.as_path()).expect("Wasn't able to create the folder {data_folder}");
+    if !data_folder.exists() {
+        std::fs::create_dir(data_folder.as_path())
+            .expect("Wasn't able to create the folder {data_folder}");
     }
     return data_folder;
 }
 
-fn get_db_file() -> std::path::PathBuf{
+fn get_db_file() -> std::path::PathBuf {
     let mut db_file = get_project_data_folder();
     db_file.push("todos.sqlite3");
-    return db_file
+    return db_file;
 }
 
-fn get_todoeditmsg_file() -> std::path::PathBuf{
+fn get_todoeditmsg_file() -> std::path::PathBuf {
     let mut todo_file = get_project_data_folder();
-    // TODO: we should clean this up if it's left beind at startup
+    // TODO: we should clean this up if it's left behind at startup
     todo_file.push("TODO_EDITMSG");
-    
-    return todo_file
+
+    return todo_file;
 }
 
 fn get_editor() -> String {
@@ -133,7 +133,8 @@ pub fn establish_connection() -> SqliteConnection {
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
     //TODO: a match here could perform log a message for successful migrations
-    conn.run_pending_migrations(MIGRATIONS).expect("Migrations couldn't be run");
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("Migrations couldn't be run");
     return conn;
 }
 
@@ -158,21 +159,36 @@ pub fn add_todo(title: Option<String>) {
             title_str,
          )
     ).expect("TODO: Writing initial todoeditmsg file failed");
-    std::process::Command::new(get_editor()).arg(fp).status().expect("TODO: editing todoeditmsg file failed");
+    std::process::Command::new(get_editor())
+        .arg(fp)
+        .status()
+        .expect("TODO: editing todoeditmsg file failed");
     let mut buf = String::new();
-    std::fs::File::open(fp).expect("TODO: opening todoeditmsg for reading failed").read_to_string(&mut buf).expect("TODO: reading final todoeditmsg file failed");
+    std::fs::File::open(fp)
+        .expect("TODO: opening todoeditmsg for reading failed")
+        .read_to_string(&mut buf)
+        .expect("TODO: reading final todoeditmsg file failed");
     std::fs::remove_file(fp).expect("todoeditmsg couldn't be removed once it was read");
     // TODO: maybe rename notes to body?
     let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
-    let final_title = not_comments.next().expect("Couldn't find title of new TODO");
+    let final_title = not_comments
+        .next()
+        .expect("Couldn't find title of new TODO");
     let notes: Vec<&str> = not_comments.collect();
     let mut full_notes = notes.join("\n");
-    full_notes = full_notes.trim_start_matches('\n').trim_end_matches('\n').to_string();
+    full_notes = full_notes
+        .trim_start_matches('\n')
+        .trim_end_matches('\n')
+        .to_string();
+    // TODO: what if file had nothing in it? What if I removed title, maybe cancel?
 
-    
     let connection = &mut establish_connection();
     // TODO: add id support
-    let new_todo = NewTodo{title: final_title, notes: &full_notes.as_str(), created_on: Utc::now()};
+    let new_todo = NewTodo {
+        title: final_title,
+        notes: &full_notes.as_str(),
+        created_on: Utc::now(),
+    };
     diesel::insert_into(todos::table)
         .values(&new_todo)
         .returning(Todos::as_returning())
@@ -180,7 +196,7 @@ pub fn add_todo(title: Option<String>) {
         .expect("Error saving new TODO");
 }
 
-pub fn list_todos(){
+pub fn list_todos() {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
     let results = todos
