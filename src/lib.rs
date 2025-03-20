@@ -12,6 +12,7 @@ use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use models::{NewTodo, Todos};
+use sqids::Sqids;
 
 const BIN: &str = env!("CARGO_PKG_NAME");
 const BIN_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -54,6 +55,27 @@ enum Commands {
     },
     /// list current TODOs
     ListTodos,
+
+fn get_squids() -> Sqids {
+    Sqids::builder()
+        .min_length(5)
+        .build()
+        .expect("Couldn't get squids")
+}
+
+fn encode_id(i: u64) -> String {
+    get_squids().encode(&vec![i]).expect("Problem encoding id")
+}
+
+fn decode_id(s: &String) -> i32 {
+    // TODO can I make this nicer?
+    (*get_squids()
+        .decode(&s)
+        .iter()
+        .next()
+        .expect("Couldn't decode id"))
+    .try_into()
+    .unwrap()
 }
 
 fn get_version_str() -> String {
