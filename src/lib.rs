@@ -95,7 +95,7 @@ fn get_project_data_folder() -> std::path::PathBuf {
     let mut data_folder = data_dir().expect("Couldn't get data dir");
     data_folder.push(BIN);
     if !data_folder.exists() {
-        std::fs::create_dir(data_folder.as_path())
+        std::fs::create_dir_all(data_folder.as_path())
             .expect("Wasn't able to create the folder {data_folder}");
     }
     return data_folder;
