@@ -48,13 +48,18 @@ enum Commands {
     #[clap(hide = true)]
     LocateDb,
     /// add a TODO
-    AddTodo {
+    Add {
         /// title of the new TODO
         #[clap()]
         title: Option<String>,
     },
     /// list current TODOs
-    ListTodos,
+    List,
+    Delete {
+        #[clap()]
+        id: String,
+    },
+}
 
 fn get_squids() -> Sqids {
     Sqids::builder()
@@ -184,10 +189,20 @@ pub fn list_todos(){
         .load(connection)
         .expect("Error loading posts");
     for post in results {
-        println!("{}", post.title);
-        println!("-----------");
-        println!("{}", post.notes);
+        println!("id: {}", encode_id(post.id.try_into().unwrap()));
+        println!("title: {}", post.title);
+        println!("notes: {}", post.notes);
     }
+}
+
+pub fn delete_todo(delete_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&delete_id);
+    diesel::delete(todos.filter(id.eq(decoded_id)))
+        .execute(connection)
+        .expect("Error loading posts");
+    println!("Post with id {} was deleted", delete_id);
 }
 
 // TODO: make this private?
@@ -201,12 +216,15 @@ pub fn run_cli() {
         Some(Commands::LocateDb) => {
             print_db_file();
         }
-        Some(Commands::AddTodo { title }) => {
+        Some(Commands::Add { title }) => {
             // TODO: maybe don't clone here
             add_todo(title.clone());
         }
-        Some(Commands::ListTodos) => {
+        Some(Commands::List {}) => {
             list_todos();
+        }
+        Some(Commands::Delete { id }) => {
+            delete_todo(id.to_string());
         }
         None => {}
     }
