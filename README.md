@@ -1,5 +1,6 @@
 # workingon
 
+[![Build and test](https://github.com/keller00/workingon/actions/workflows/coverage.yml/badge.svg)](https://github.com/keller00/workingon/actions/workflows/coverage.yml)
 [![codecov](https://codecov.io/github/keller00/workingon/graph/badge.svg?token=OFRWWDT7BT)](https://codecov.io/github/keller00/workingon)
 
 A CLI to track what someone is working on and manage TODOs.
@@ -20,7 +21,6 @@ To run tests execute:
 cargo test
 ```
 
-
 ## Other CLI commands
 
 ### Find the database file
@@ -36,7 +36,7 @@ cargo run -- locate-db
 (this command will not stick around, it's just for testing purposes)
 
 ```shell
-$ cargo run -- add-todo "this is a test"
+cargo run -- add-todo "this is a test"
 
 ```
 
