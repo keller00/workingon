@@ -53,6 +53,7 @@ enum Commands {
         title: Option<String>,
     },
     /// list current TODOs
+    #[clap(visible_alias = "ls")]
     List,
     Delete {
         #[clap()]
