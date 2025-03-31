@@ -206,9 +206,7 @@ pub fn list_todos() {
         .load(connection)
         .expect("Error loading posts");
     for post in results {
-        println!("id: {}", encode_id(post.id.try_into().unwrap()));
-        println!("title: {}", post.title);
-        println!("notes: {}", post.notes);
+        println!("{} {}", encode_id(post.id.try_into().unwrap()), post.title);
     }
 }
 
