@@ -7,6 +7,7 @@ use self::schema::todos;
 
 use chrono::Utc;
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -53,7 +54,9 @@ enum Commands {
         title: Option<String>,
     },
     /// list current TODOs
+    #[clap(visible_alias = "ls")]
     List,
+    #[clap(visible_alias = "rm")]
     Delete {
         #[clap()]
         id: String,
@@ -63,6 +66,7 @@ enum Commands {
 fn get_squids() -> Sqids {
     Sqids::builder()
         .min_length(5)
+        .alphabet("abcdefghijklmnopqrstuvwxyz1234567890".chars().collect())
         .build()
         .expect("Couldn't get squids")
 }
@@ -205,9 +209,11 @@ pub fn list_todos() {
         .load(connection)
         .expect("Error loading posts");
     for post in results {
-        println!("id: {}", encode_id(post.id.try_into().unwrap()));
-        println!("title: {}", post.title);
-        println!("notes: {}", post.notes);
+        println!(
+            "{} {}",
+            encode_id(post.id.try_into().unwrap()).yellow(),
+            post.title
+        );
     }
 }
 
