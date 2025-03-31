@@ -55,6 +55,7 @@ enum Commands {
     /// list current TODOs
     #[clap(visible_alias = "ls")]
     List,
+    #[clap(visible_alias = "rm")]
     Delete {
         #[clap()]
         id: String,
