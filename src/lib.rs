@@ -204,8 +204,9 @@ pub fn list_todos() {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
     let results = todos
-        .limit(5)
         .select(Todos::as_select())
+        .order_by(id.desc())
+        .limit(5)
         .load(connection)
         .expect("Error loading posts");
     for post in results {
