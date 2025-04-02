@@ -61,6 +61,11 @@ enum Commands {
         #[clap()]
         id: String,
     },
+    #[clap()]
+    Show {
+        #[clap()]
+        id: String,
+    },
 }
 
 fn get_squids() -> Sqids {
@@ -200,6 +205,22 @@ pub fn add_todo(title: Option<String>) {
         .expect("Error saving new TODO");
 }
 
+pub fn show_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    let found_todos = todos
+        .select(Todos::as_select())
+        .filter(id.eq(decoded_id))
+        .load(connection)
+        .expect("TODOs couldn't be retrieved");
+    assert!(
+        found_todos.len() == 1,
+        "TODO to show couldn't be found {}",
+        found_todos.len()
+    );
+    println!("{}\n{}", found_todos[0].title, found_todos[0].notes);
+}
 pub fn list_todos() {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
@@ -248,6 +269,9 @@ pub fn run_cli() {
         }
         Some(Commands::Delete { id }) => {
             delete_todo(id.to_string());
+        }
+        Some(Commands::Show { id }) => {
+            show_todo(id.to_string());
         }
         None => {}
     }
