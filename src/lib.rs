@@ -19,6 +19,8 @@ const BIN: &str = env!("CARGO_PKG_NAME");
 const BIN_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_EDITOR: &str = "vi";
 
+const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
+
 #[derive(Parser)]
 #[command(
     disable_version_flag = true,
@@ -147,37 +149,25 @@ pub fn establish_connection() -> SqliteConnection {
     return conn;
 }
 
-pub fn add_todo(title: Option<String>) {
-    // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
-    //  don't forget multiline messages with multiple -m's
-    let title_str = match title {
-        Some(t) => t,
-        None => "<title>".to_string(),
-    };
-    let p_buff = get_todoeditmsg_file();
-    let fp = p_buff.as_path();
-    let mut file = std::fs::File::create(fp).expect("File {fp} couldn't be created");
-    file.write_fmt(
-        format_args!(
-            "{}
-
-# This is a comment, lines starting with a # will be ignored
-
-# The first non-comment line will assumed to be the title and every other line will be saved as notes
-",
-            title_str,
-         )
-    ).expect("TODO: Writing initial todoeditmsg file failed");
+pub fn create_temp_todo_file_open_and_then_read_remove_process(
+    fp: &std::path::Path,
+    body: String,
+) -> (String, String) {
+    let mut file = std::fs::File::create(fp)
+        .expect(format!("File {} couldn't be created", fp.display()).as_str());
+    file.write_all(body.as_bytes())
+        .expect(format!("the body couldn't be written to {}", fp.display()).as_str());
     std::process::Command::new(get_editor())
         .arg(fp)
         .status()
-        .expect("TODO: editing todoeditmsg file failed");
+        .expect(format!("opening editor for {} failed", fp.display()).as_str());
     let mut buf = String::new();
     std::fs::File::open(fp)
-        .expect("TODO: opening todoeditmsg for reading failed")
+        .expect(format!("opening {} for reading after editing failed", fp.display()).as_str())
         .read_to_string(&mut buf)
-        .expect("TODO: reading final todoeditmsg file failed");
-    std::fs::remove_file(fp).expect("todoeditmsg couldn't be removed once it was read");
+        .expect(format!("reading {} after editing failed", fp.display()).as_str());
+    std::fs::remove_file(fp)
+        .expect(format!("{} couldn't be removed once it was read", fp.display()).as_str());
     // TODO: maybe rename notes to body?
     let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
     let final_title = not_comments
@@ -191,11 +181,33 @@ pub fn add_todo(title: Option<String>) {
         .to_string();
     // TODO: what if file had nothing in it? What if I removed title, maybe cancel?
 
+    return (final_title.to_string(), full_notes);
+}
+
+pub fn add_todo(title: Option<String>) {
+    // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
+    //  don't forget multiline messages with multiple -m's
+    let title_str = match title {
+        Some(t) => t,
+        None => "<title>".to_string(),
+    };
+    let p_buff = get_todoeditmsg_file();
+    let fp = p_buff.as_path();
+    let body = format!(
+            "{}
+
+{}
+
+# The first non-comment line will assumed to be the title and every other line will be saved as notes
+",
+        title_str,
+        COMMENT_DISCLAIMER,
+    );
+    let (title, notes) = create_temp_todo_file_open_and_then_read_remove_process(fp, body);
     let connection = &mut establish_connection();
-    // TODO: add id support
     let new_todo = NewTodo {
-        title: final_title,
-        notes: &full_notes.as_str(),
+        title: title.as_str(),
+        notes: notes.as_str(),
         created_on: Utc::now(),
     };
     diesel::insert_into(todos::table)
