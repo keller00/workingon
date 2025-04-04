@@ -1,7 +1,7 @@
-use diesel::prelude::*;
 use chrono::{DateTime, Utc};
+use diesel::prelude::*;
 
-#[derive(Queryable, Selectable)]
+#[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = crate::schema::todos)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Todos {
@@ -19,3 +19,4 @@ pub struct NewTodo<'a> {
     pub notes: &'a str,
     pub created_on: DateTime<Utc>,
 }
+

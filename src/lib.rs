@@ -13,11 +13,14 @@ use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs::data_dir;
 use models::{NewTodo, Todos};
+use schema::todos::created_on;
 use sqids::Sqids;
 
 const BIN: &str = env!("CARGO_PKG_NAME");
 const BIN_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_EDITOR: &str = "vi";
+
+const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
 
 #[derive(Parser)]
 #[command(
@@ -61,12 +64,22 @@ enum Commands {
         #[clap()]
         id: String,
     },
+    #[clap()]
+    Show {
+        #[clap()]
+        id: String,
+    },
+    #[clap()]
+    Edit {
+        #[clap()]
+        id: String,
+    },
 }
 
 fn get_squids() -> Sqids {
     Sqids::builder()
         .min_length(5)
-        .alphabet("abcdefghijklmnopqrstuvwxyz1234567890".chars().collect())
+        .alphabet("1234567890abcdefghijklmnopqrstuvwxyz".chars().collect())
         .build()
         .expect("Couldn't get squids")
 }
@@ -142,37 +155,25 @@ pub fn establish_connection() -> SqliteConnection {
     return conn;
 }
 
-pub fn add_todo(title: Option<String>) {
-    // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
-    //  don't forget multiline messages with multiple -m's
-    let title_str = match title {
-        Some(t) => t,
-        None => "<title>".to_string(),
-    };
-    let p_buff = get_todoeditmsg_file();
-    let fp = p_buff.as_path();
-    let mut file = std::fs::File::create(fp).expect("File {fp} couldn't be created");
-    file.write_fmt(
-        format_args!(
-            "{}
-
-# This is a comment, lines starting with a # will be ignored
-
-# The first non-comment line will assumed to be the title and every other line will be saved as notes
-",
-            title_str,
-         )
-    ).expect("TODO: Writing initial todoeditmsg file failed");
+pub fn create_temp_todo_file_open_and_then_read_remove_process(
+    fp: &std::path::Path,
+    body: String,
+) -> (String, String) {
+    let mut file = std::fs::File::create(fp)
+        .expect(format!("File {} couldn't be created", fp.display()).as_str());
+    file.write_all(body.as_bytes())
+        .expect(format!("the body couldn't be written to {}", fp.display()).as_str());
     std::process::Command::new(get_editor())
         .arg(fp)
         .status()
-        .expect("TODO: editing todoeditmsg file failed");
+        .expect(format!("opening editor for {} failed", fp.display()).as_str());
     let mut buf = String::new();
     std::fs::File::open(fp)
-        .expect("TODO: opening todoeditmsg for reading failed")
+        .expect(format!("opening {} for reading after editing failed", fp.display()).as_str())
         .read_to_string(&mut buf)
-        .expect("TODO: reading final todoeditmsg file failed");
-    std::fs::remove_file(fp).expect("todoeditmsg couldn't be removed once it was read");
+        .expect(format!("reading {} after editing failed", fp.display()).as_str());
+    std::fs::remove_file(fp)
+        .expect(format!("{} couldn't be removed once it was read", fp.display()).as_str());
     // TODO: maybe rename notes to body?
     let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
     let final_title = not_comments
@@ -186,11 +187,33 @@ pub fn add_todo(title: Option<String>) {
         .to_string();
     // TODO: what if file had nothing in it? What if I removed title, maybe cancel?
 
+    return (final_title.to_string(), full_notes);
+}
+
+pub fn add_todo(title: Option<String>) {
+    // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
+    //  don't forget multiline messages with multiple -m's
+    let title_str = match title {
+        Some(t) => t,
+        None => "<title>".to_string(),
+    };
+    let p_buff = get_todoeditmsg_file();
+    let fp = p_buff.as_path();
+    let body = format!(
+            "{}
+
+{}
+
+# The first non-comment line will assumed to be the title and every other line will be saved as notes
+",
+        title_str,
+        COMMENT_DISCLAIMER,
+    );
+    let (title, notes) = create_temp_todo_file_open_and_then_read_remove_process(fp, body);
     let connection = &mut establish_connection();
-    // TODO: add id support
     let new_todo = NewTodo {
-        title: final_title,
-        notes: &full_notes.as_str(),
+        title: title.as_str(),
+        notes: notes.as_str(),
         created_on: Utc::now(),
     };
     diesel::insert_into(todos::table)
@@ -198,6 +221,60 @@ pub fn add_todo(title: Option<String>) {
         .returning(Todos::as_returning())
         .get_result(connection)
         .expect("Error saving new TODO");
+    println!("TODO added successfully");
+}
+
+pub fn show_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    let found_todos = todos
+        .select(Todos::as_select())
+        .filter(id.eq(decoded_id))
+        .load(connection)
+        .expect("TODOs couldn't be retrieved");
+    assert!(
+        found_todos.len() == 1,
+        "TODO to show couldn't be found {}",
+        found_todos.len()
+    );
+    println!("{}\n{}", found_todos[0].title, found_todos[0].notes);
+}
+
+pub fn edit_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    let mut found_todos = todos
+        .select(Todos::as_select())
+        .filter(id.eq(decoded_id))
+        .load(connection)
+        .expect("TODOs couldn't be retrieved");
+    assert!(
+        found_todos.len() == 1,
+        "TODO to show couldn't be found {}",
+        found_todos.len()
+    );
+    let p_buff = get_todoeditmsg_file();
+    let fp = p_buff.as_path();
+    let body = format!(
+            "{}
+{}
+{}
+
+# The first non-comment line will assumed to be the title and every other line will be saved as notes
+",
+        found_todos[0].title,
+        COMMENT_DISCLAIMER,
+        found_todos[0].notes,
+    );
+    let (t, n) = create_temp_todo_file_open_and_then_read_remove_process(fp, body);
+    // TODO: do the rest of this
+    diesel::update(&found_todos[0])
+        .set((title.eq(t), notes.eq(n)))
+        .execute(connection)
+        .expect("Was unable to update TODO");
+    println!("TODO updated successfully")
 }
 
 pub fn list_todos() {
@@ -248,6 +325,12 @@ pub fn run_cli() {
         }
         Some(Commands::Delete { id }) => {
             delete_todo(id.to_string());
+        }
+        Some(Commands::Show { id }) => {
+            show_todo(id.to_string());
+        }
+        Some(Commands::Edit { id }) => {
+            edit_todo(id.to_string());
         }
         None => {}
     }
