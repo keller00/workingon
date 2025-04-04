@@ -13,6 +13,7 @@ use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs::data_dir;
 use models::{NewTodo, Todos};
+use schema::todos::created_on;
 use sqids::Sqids;
 
 const BIN: &str = env!("CARGO_PKG_NAME");
@@ -68,12 +69,17 @@ enum Commands {
         #[clap()]
         id: String,
     },
+    #[clap()]
+    Edit {
+        #[clap()]
+        id: String,
+    },
 }
 
 fn get_squids() -> Sqids {
     Sqids::builder()
         .min_length(5)
-        .alphabet("abcdefghijklmnopqrstuvwxyz1234567890".chars().collect())
+        .alphabet("1234567890abcdefghijklmnopqrstuvwxyz".chars().collect())
         .build()
         .expect("Couldn't get squids")
 }
@@ -215,6 +221,7 @@ pub fn add_todo(title: Option<String>) {
         .returning(Todos::as_returning())
         .get_result(connection)
         .expect("Error saving new TODO");
+    println!("TODO added successfully");
 }
 
 pub fn show_todo(show_id: String) {
@@ -233,6 +240,43 @@ pub fn show_todo(show_id: String) {
     );
     println!("{}\n{}", found_todos[0].title, found_todos[0].notes);
 }
+
+pub fn edit_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    let mut found_todos = todos
+        .select(Todos::as_select())
+        .filter(id.eq(decoded_id))
+        .load(connection)
+        .expect("TODOs couldn't be retrieved");
+    assert!(
+        found_todos.len() == 1,
+        "TODO to show couldn't be found {}",
+        found_todos.len()
+    );
+    let p_buff = get_todoeditmsg_file();
+    let fp = p_buff.as_path();
+    let body = format!(
+            "{}
+{}
+{}
+
+# The first non-comment line will assumed to be the title and every other line will be saved as notes
+",
+        found_todos[0].title,
+        COMMENT_DISCLAIMER,
+        found_todos[0].notes,
+    );
+    let (t, n) = create_temp_todo_file_open_and_then_read_remove_process(fp, body);
+    // TODO: do the rest of this
+    diesel::update(&found_todos[0])
+        .set((title.eq(t), notes.eq(n)))
+        .execute(connection)
+        .expect("Was unable to update TODO");
+    println!("TODO updated successfully")
+}
+
 pub fn list_todos() {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
@@ -284,6 +328,9 @@ pub fn run_cli() {
         }
         Some(Commands::Show { id }) => {
             show_todo(id.to_string());
+        }
+        Some(Commands::Edit { id }) => {
+            edit_todo(id.to_string());
         }
         None => {}
     }
