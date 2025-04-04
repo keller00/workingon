@@ -9,6 +9,7 @@ use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs::data_dir;
+use models::{NewTodo, Todos};
 use sqids::Sqids;
 use std::{
     io::{Read, Write},
@@ -16,7 +17,6 @@ use std::{
 };
 
 use self::constants::{BIN, DEFAULT_EDITOR};
-use self::models::{NewTodo, Todos};
 use self::schema::todos;
 
 // Constants only used in this file
@@ -184,7 +184,21 @@ pub fn show_todo(show_id: String) {
         "TODO to show couldn't be found {}",
         found_todos.len()
     );
-    println!("{}\n{}", found_todos[0].title, found_todos[0].notes);
+    let completed_str = found_todos[0].completed.map(|c| c.to_string()).unwrap_or("not yet".to_string());
+    println!("{}\nIt was completed on: {}\n{}",
+        found_todos[0].title,
+        completed_str,
+        found_todos[0].notes,
+    );
+}
+
+pub fn complete_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    diesel::update(todos.find(decoded_id))
+        .set(completed_on.eq(Utc::now()))
+        .execute(connection);
 }
 
 pub fn edit_todo(show_id: String) {
