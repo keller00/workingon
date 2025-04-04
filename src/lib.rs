@@ -250,7 +250,6 @@ pub fn complete_todo(show_id: String) {
     let connection = &mut establish_connection();
     let decoded_id = decode_id(&show_id);
     diesel::update(todos.find(decoded_id))
-        // .set(notes.eq("asd"))
         .set(completed_on.eq(Utc::now()))
         .execute(connection);
 }
