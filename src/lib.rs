@@ -160,7 +160,7 @@ pub fn add_todo(title: Option<String>) {
     let new_todo = NewTodo {
         title: title.as_str(),
         notes: notes.as_str(),
-        created_on: Utc::now(),
+        created: Utc::now(),
     };
     diesel::insert_into(todos::table)
         .values(&new_todo)
@@ -197,8 +197,10 @@ pub fn complete_todo(show_id: String) {
     let connection = &mut establish_connection();
     let decoded_id = decode_id(&show_id);
     diesel::update(todos.find(decoded_id))
-        .set(completed_on.eq(Utc::now()))
-        .execute(connection);
+        .set(completed.eq(Utc::now()))
+        .execute(connection)
+        .expect("TODO couldn't be completed");
+    println!("TODO was completed")
 }
 
 pub fn edit_todo(show_id: String) {
