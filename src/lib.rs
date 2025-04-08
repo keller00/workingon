@@ -73,6 +73,11 @@ enum Commands {
         #[clap()]
         id: String,
     },
+    #[clap()]
+    Complete {
+        #[clap()]
+        id: String,
+    },
 }
 
 fn get_squids() -> Sqids {
@@ -213,7 +218,7 @@ pub fn add_todo(title: Option<String>) {
     let new_todo = NewTodo {
         title: title.as_str(),
         notes: notes.as_str(),
-        created_on: Utc::now(),
+        created: Utc::now(),
     };
     diesel::insert_into(todos::table)
         .values(&new_todo)
@@ -238,6 +243,17 @@ pub fn show_todo(show_id: String) {
         found_todos.len()
     );
     println!("{}\n{}", found_todos[0].title, found_todos[0].notes);
+}
+
+pub fn complete_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    diesel::update(todos.find(decoded_id))
+        .set(completed.eq(Utc::now()))
+        .execute(connection)
+        .expect("TODO couldn't be completed");
+    println!("TODO was completed")
 }
 
 pub fn edit_todo(show_id: String) {
@@ -330,6 +346,9 @@ pub fn run_cli() {
         }
         Some(Commands::Edit { id }) => {
             edit_todo(id.to_string());
+        }
+        Some(Commands::Complete { id }) => {
+            complete_todo(id.to_string());
         }
         None => {}
     }
