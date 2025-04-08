@@ -1,0 +1,83 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-gnu
+          - i686-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Strip binaries (Linux)
+        if: matrix.target == 'i686-unknown-linux-gnu'
+        run: strip target/${{ matrix.target }}/release/${{ github.event.repository }}
+
+      - name: Rename binaries (Windows)
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: rename target/${{ matrix.target }}/release/${{ github.event.repository }}.exe ${{ github.event.repository }}.exe
+
+      - name: Create Artifacts Directory
+        run: mkdir artifacts
+
+      - name: Copy binaries to Artifacts Directory
+        run: |
+          if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
+            cp target/${{ matrix.target }}/release/${{ github.event.repository }} artifacts/${{ github.event.repository }}-macos-arm64
+          elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
+            cp target/${{ matrix.target }}/release/${{ github.event.repository }}.exe artifacts/${{ github.event.repository }}-windows-x86.exe
+          else
+            cp target/${{ matrix.target }}/release/${{ github.event.repository }} artifacts/${{ github.event.repository }}-linux-x86
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries-${{ matrix.target }}
+          path: artifacts
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Zip Artifacts
+        run: |
+          mkdir binaries
+          mv artifacts/*/* binaries/
+          zip -r binaries.zip binaries
+
+      - name: Attach to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: binaries.zip
+          asset_name: binaries.zip
+          tag: ${{ github.ref }}
+          overwrite: true
