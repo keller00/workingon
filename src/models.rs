@@ -10,8 +10,8 @@ pub struct Todos {
     pub title: String,
     pub notes: String,
     // TODO: time tracking
-    pub created_on: DateTime<Utc>,
-    pub completed_on: Option<DateTime<Utc>>,
+    pub created: DateTime<Utc>,
+    pub completed: Option<DateTime<Utc>>,
 }
 
 #[derive(Insertable)]
@@ -19,5 +19,5 @@ pub struct Todos {
 pub struct NewTodo<'a> {
     pub title: &'a str,
     pub notes: &'a str,
-    pub created_on: DateTime<Utc>,
+    pub created: DateTime<Utc>,
 }
