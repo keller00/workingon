@@ -51,11 +51,11 @@ jobs:
       - name: Copy binaries to Artifacts Directory
         run: |
           if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" ]]; then
-            cp target/${{ matrix.target }}/release/${{ github.event.repository }} artifacts/${{ github.event.repository }}-macos-arm64
+            cp target/${{ matrix.target }}/release/workingon artifacts/workingon-macos-arm64
           elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
-            cp target/${{ matrix.target }}/release/${{ github.event.repository }}.exe artifacts/${{ github.event.repository }}-windows-x86.exe
+            cp target/${{ matrix.target }}/release/workingon.exe artifacts/workingon-windows-x86.exe
           else
-            cp target/${{ matrix.target }}/release/${{ github.event.repository }} artifacts/${{ github.event.repository }}-linux-x86
+            cp target/${{ matrix.target }}/release/workingon artifacts/workingon-linux-x86
           fi
 
       - name: Upload Artifacts

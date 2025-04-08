@@ -13,7 +13,6 @@ use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs::data_dir;
 use models::{NewTodo, Todos};
-use schema::todos::created_on;
 use sqids::Sqids;
 
 const BIN: &str = env!("CARGO_PKG_NAME");
@@ -245,7 +244,7 @@ pub fn edit_todo(show_id: String) {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
     let decoded_id = decode_id(&show_id);
-    let mut found_todos = todos
+    let found_todos = todos
         .select(Todos::as_select())
         .filter(id.eq(decoded_id))
         .load(connection)
