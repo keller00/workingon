@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: x86_64-apple-darwin
+          - target: aarch64-apple-darwin
             runs-on: macos-latest
           - target: x86_64-pc-windows-gnu
             runs-on: windows-latest
@@ -50,7 +50,7 @@ jobs:
 
       - name: Copy binaries to Artifacts Directory
         run: |
-          if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
+          if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" ]]; then
             cp target/${{ matrix.target }}/release/${{ github.event.repository }} artifacts/${{ github.event.repository }}-macos-arm64
           elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
             cp target/${{ matrix.target }}/release/${{ github.event.repository }}.exe artifacts/${{ github.event.repository }}-windows-x86.exe
