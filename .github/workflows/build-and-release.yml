@@ -12,10 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target:
-          - x86_64-apple-darwin
-          - x86_64-pc-windows-gnu
-          - i686-unknown-linux-gnu
+        include:
+          - target: x86_64-apple-darwin
+            runs-on: macos-latest
+          - target: x86_64-pc-windows-gnu
+            runs-on: windows-latest
+          - target: i686-unknown-linux-gnu
+            runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +31,11 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --verbose --release --target ${{ matrix.target }}
 
       - name: Strip binaries (Linux)
         if: matrix.target == 'i686-unknown-linux-gnu'
