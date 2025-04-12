@@ -15,9 +15,10 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             runs-on: macos-latest
-          - target: x86_64-pc-windows-gnu
-            runs-on: windows-latest
-          - target: i686-unknown-linux-gnu
+          # TODO: figure out how to build project on Windows
+          # - target: x86_64-pc-windows-gnu
+          #   runs-on: windows-latest
+          - target: x86_64-unknown-linux-gnu
             runs-on: ubuntu-latest
 
     steps:
@@ -33,13 +34,12 @@ jobs:
       - name: Build
         uses: actions-rs/cargo@v1
         with:
-          use-cross: true
           command: build
           args: --verbose --release --target ${{ matrix.target }}
 
       - name: Strip binaries (Linux)
-        if: matrix.target == 'i686-unknown-linux-gnu'
-        run: strip target/${{ matrix.target }}/release/${{ github.event.repository }}
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: strip target/${{ matrix.target }}/release/workingon
 
       - name: Rename binaries (Windows)
         if: matrix.target == 'x86_64-pc-windows-gnu'
