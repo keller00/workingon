@@ -1,1 +1,1 @@
-drop table `todos`;
+DROP TABLE `todos`;
