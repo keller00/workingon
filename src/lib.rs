@@ -84,22 +84,18 @@ fn get_squids() -> Sqids {
 }
 
 fn encode_id(i: u64) -> String {
-    get_squids().encode(&vec![i]).expect("Problem encoding id")
+    get_squids().encode(&[i]).expect("Problem encoding id")
 }
 
-fn decode_id(s: &String) -> i32 {
+fn decode_id(s: &str) -> i32 {
     // TODO can I make this nicer?
-    (*get_squids()
-        .decode(&s)
-        .iter()
-        .next()
-        .expect("Couldn't decode id"))
-    .try_into()
-    .unwrap()
+    (*get_squids().decode(s).first().expect("Couldn't decode id"))
+        .try_into()
+        .unwrap()
 }
 
 fn get_version_str() -> String {
-    return format!("version {}", BIN_VERSION);
+    format!("version {}", BIN_VERSION)
 }
 
 fn print_version() {
@@ -114,13 +110,13 @@ fn get_project_data_folder() -> std::path::PathBuf {
         std::fs::create_dir_all(data_folder.as_path())
             .expect("Wasn't able to create the folder {data_folder}");
     }
-    return data_folder;
+    data_folder
 }
 
 fn get_db_file() -> std::path::PathBuf {
     let mut db_file = get_project_data_folder();
     db_file.push("todos.sqlite3");
-    return db_file;
+    db_file
 }
 
 fn get_todoeditmsg_file() -> std::path::PathBuf {
@@ -128,7 +124,7 @@ fn get_todoeditmsg_file() -> std::path::PathBuf {
     // TODO: we should clean this up if it's left behind at startup
     todo_file.push("TODO_EDITMSG");
 
-    return todo_file;
+    todo_file
 }
 
 fn get_editor() -> String {
@@ -151,7 +147,7 @@ pub fn establish_connection() -> SqliteConnection {
     //TODO: a match here could perform log a message for successful migrations
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Migrations couldn't be run");
-    return conn;
+    conn
 }
 
 pub fn create_temp_todo_file_open_and_then_read_remove_process(
@@ -186,7 +182,7 @@ pub fn create_temp_todo_file_open_and_then_read_remove_process(
         .to_string();
     // TODO: what if file had nothing in it? What if I removed title, maybe cancel?
 
-    return (final_title.to_string(), full_notes);
+    (final_title.to_string(), full_notes)
 }
 
 pub fn add_todo(title: Option<String>) {
