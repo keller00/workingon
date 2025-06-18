@@ -19,4 +19,3 @@ pub struct NewTodo<'a> {
     pub notes: &'a str,
     pub created_on: DateTime<Utc>,
 }
-
