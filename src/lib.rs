@@ -1,7 +1,7 @@
 pub mod models;
 pub mod schema;
 
-use std::io::{Read, Write};
+use std::{io::{Read, Write}, str::FromStr};
 
 use self::schema::todos;
 
@@ -83,11 +83,11 @@ fn get_squids() -> Sqids {
         .expect("Couldn't get squids")
 }
 
-fn encode_id(i: u64) -> String {
+pub fn encode_id(i: u64) -> String {
     get_squids().encode(&vec![i]).expect("Problem encoding id")
 }
 
-fn decode_id(s: &str) -> i32 {
+pub fn decode_id(s: &str) -> i32 {
     // TODO can I make this nicer?
     (*get_squids()
         .decode(s)
@@ -107,13 +107,21 @@ fn print_version() {
 
 // TODO: make this return a Path
 fn get_project_data_folder() -> std::path::PathBuf {
-    let mut data_folder = data_dir().expect("Couldn't get data dir");
-    data_folder.push(BIN);
-    if !data_folder.exists() {
-        std::fs::create_dir_all(data_folder.as_path())
-            .expect("Wasn't able to create the folder {data_folder}");
+    let env_var_name = format!("{}_data_dir", BIN).to_uppercase();
+    match std::env::var(env_var_name) {
+        Ok(dd) => {
+            std::path::PathBuf::from_str(&dd).expect("Env var data dir is not a valid path")
+        },
+        Err(_) => {
+            let mut data_folder = data_dir().expect("Couldn't get data dir");
+            data_folder.push(BIN);
+            if !data_folder.exists() {
+                std::fs::create_dir_all(data_folder.as_path())
+                    .expect("Wasn't able to create the folder {data_folder}");
+            }
+            data_folder
+        }
     }
-    data_folder
 }
 
 fn get_db_file() -> std::path::PathBuf {
@@ -155,35 +163,53 @@ pub fn establish_connection() -> SqliteConnection {
 
 pub fn create_temp_todo_file_open_and_then_read_remove_process(
     fp: &std::path::Path,
-    body: String,
+    title: String,
+    notes: String,
 ) -> (String, String) {
-    let mut file = std::fs::File::create(fp)
-        .expect(format!("File {} couldn't be created", fp.display()).as_str());
-    file.write_all(body.as_bytes())
-        .expect(format!("the body couldn't be written to {}", fp.display()).as_str());
-    std::process::Command::new(get_editor())
-        .arg(fp)
-        .status()
-        .expect(format!("opening editor for {} failed", fp.display()).as_str());
-    let mut buf = String::new();
-    std::fs::File::open(fp)
-        .expect(format!("opening {} for reading after editing failed", fp.display()).as_str())
-        .read_to_string(&mut buf)
-        .expect(format!("reading {} after editing failed", fp.display()).as_str());
-    std::fs::remove_file(fp)
-        .expect(format!("{} couldn't be removed once it was read", fp.display()).as_str());
-    // TODO: maybe rename notes to body?
-    let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
-    let final_title = not_comments
-        .next()
-        .expect("Couldn't find title of new TODO");
-    let notes: Vec<&str> = not_comments.collect();
-    let mut full_notes = notes.join("\n");
-    full_notes = full_notes
-        .trim_start_matches('\n')
-        .trim_end_matches('\n')
-        .to_string();
-    // TODO: what if file had nothing in it? What if I removed title, maybe cancel?
+    let body = format!(
+            "{}
+{}
+{}
+
+# The first non-comment line will assumed to be the title and every other line will be saved as notes
+",
+        title,
+        COMMENT_DISCLAIMER,
+        notes,
+    );
+    let mut final_title = title;
+    let mut full_notes = notes;
+    let editor = get_editor();
+    println!("{}", editor);
+    if editor != "-" {
+        let mut file = std::fs::File::create(fp)
+            .unwrap_or_else(|_| panic!("File {} couldn't be created", fp.display()));
+        file.write_all(body.as_bytes())
+            .unwrap_or_else(|_| panic!("the body couldn't be written to {}", fp.display()));
+        std::process::Command::new(get_editor())
+            .arg(fp)
+            .status()
+            .unwrap_or_else(|_| panic!("opening editor for {} failed", fp.display()));
+        let mut buf = String::new();
+        std::fs::File::open(fp)
+            .unwrap_or_else(|_| panic!("opening {} for reading after editing failed", fp.display()))
+            .read_to_string(&mut buf)
+            .unwrap_or_else(|_| panic!("reading {} after editing failed", fp.display()));
+        std::fs::remove_file(fp)
+            .unwrap_or_else(|_| panic!("{} couldn't be removed once it was read", fp.display()));
+        // TODO: maybe rename notes to body?
+        let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
+        final_title = not_comments
+            .next()
+            .expect("Couldn't find title of new TODO").to_string();
+        let notes: Vec<&str> = not_comments.collect();
+        full_notes = notes.join("\n");
+        full_notes = full_notes
+            .trim_start_matches('\n')
+            .trim_end_matches('\n')
+            .to_string();
+        // TODO: what if file had nothing in it? What if I removed title, maybe cancel?
+    }
 
     (final_title.to_string(), full_notes)
 }
@@ -197,17 +223,11 @@ pub fn add_todo(title: Option<String>) {
     };
     let p_buff = get_todoeditmsg_file();
     let fp = p_buff.as_path();
-    let body = format!(
-            "{}
-
-{}
-
-# The first non-comment line will assumed to be the title and every other line will be saved as notes
-",
+    let (title, notes) = create_temp_todo_file_open_and_then_read_remove_process(
+        fp,
         title_str,
-        COMMENT_DISCLAIMER,
+        String::new(),
     );
-    let (title, notes) = create_temp_todo_file_open_and_then_read_remove_process(fp, body);
     let connection = &mut establish_connection();
     let new_todo = NewTodo {
         title: title.as_str(),
@@ -255,18 +275,11 @@ pub fn edit_todo(show_id: String) {
     );
     let p_buff = get_todoeditmsg_file();
     let fp = p_buff.as_path();
-    let body = format!(
-            "{}
-{}
-{}
-
-# The first non-comment line will assumed to be the title and every other line will be saved as notes
-",
-        found_todos[0].title,
-        COMMENT_DISCLAIMER,
-        found_todos[0].notes,
+    let (t, n) = create_temp_todo_file_open_and_then_read_remove_process(
+        fp,
+        found_todos[0].title.clone(),
+        found_todos[0].notes.clone(),
     );
-    let (t, n) = create_temp_todo_file_open_and_then_read_remove_process(fp, body);
     // TODO: do the rest of this
     diesel::update(&found_todos[0])
         .set((title.eq(t), notes.eq(n)))
