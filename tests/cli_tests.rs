@@ -1,6 +1,29 @@
 use rstest::rstest;
 use assert_cmd::Command;
 use predicates::prelude::*;
+use tempdir::TempDir;
+use workingon::{establish_connection, encode_id};
+use workingon::schema::todos::dsl::*;
+use diesel::prelude::*;
+
+// Helper function to get the latest TODO from the database
+fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
+    let connection = &mut establish_connection();
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .order_by(id.desc())
+        .limit(1)
+        .load(connection)
+        .expect("Error loading todos");
+
+    if results.is_empty() {
+        None
+    } else {
+        let todo = results.into_iter().next().unwrap();
+        let encoded_id = encode_id(todo.id.try_into().unwrap());
+        Some((encoded_id, todo))
+    }
+}
 
 #[rstest]
 #[case("version")]
@@ -20,7 +43,6 @@ fn test_version_command(#[case] command: &str) {
     );
 }
 
-
 #[rstest]
 fn test_locate_db() {
     Command::cargo_bin("workingon").unwrap()
@@ -34,4 +56,120 @@ fn test_locate_db() {
             "todos.sqlite3\n",
         )
     );
+}
+
+#[rstest]
+fn test_help_command() {
+    Command::cargo_bin("workingon").unwrap()
+    .args(["--help"])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("CLI to track what you\'re working on"));
+}
+
+#[test]
+fn test_list_empty() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+    Command::cargo_bin("workingon").unwrap()
+    .env("WORKINGON_DATA_DIR", tmp_dir.path())
+    .args(["list"])
+    .assert()
+    .success()
+    .stdout(predicate::str::is_empty());
+}
+
+#[test]
+fn test_list_alias_ls() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+    Command::cargo_bin("workingon").unwrap()
+    .env("WORKINGON_DATA_DIR", tmp_dir.path())
+    .args(["ls"])
+    .assert()
+    .success()
+    .stdout(predicate::str::is_empty());
+}
+
+#[test]
+fn test_add_todo_with_title() {
+    // Set a mock editor to avoid interactive prompts
+    Command::cargo_bin("workingon").unwrap()
+    .env("EDITOR", "-")
+    .args(["add", "Test TODO"])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("TODO added successfully"));
+}
+
+#[test]
+fn test_add_todo_without_title() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+    // Set a mock editor to avoid interactive prompts
+    let mut cmd = Command::cargo_bin("workingon").unwrap();
+    cmd.env("EDITOR", "-");
+    cmd.env("WORKINGON_DATA_DIR", tmp_dir.path());
+
+    cmd.args(["add"])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("TODO added successfully"));
+}
+
+#[test]
+fn test_add_and_list_todos() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+    // Add a TODO
+    let mut cmd = Command::cargo_bin("workingon").unwrap();
+    cmd.env("EDITOR", "-");
+    cmd.env("WORKINGON_DATA_DIR", tmp_dir.path());
+
+    cmd.args(["add", "First TODO"])
+    .assert()
+    .success();
+
+    // Add another TODO
+    Command::cargo_bin("workingon").unwrap()
+    .env("EDITOR", "-")
+    .env("WORKINGON_DATA_DIR", tmp_dir.path())
+    .args(["add", "Second TODO"])
+    .assert()
+    .success();
+
+    // List TODOs
+    Command::cargo_bin("workingon").unwrap()
+    .env("EDITOR", "-")
+    .env("WORKINGON_DATA_DIR", tmp_dir.path())
+    .args(["list"])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("First TODO"))
+    .stdout(predicate::str::contains("Second TODO"));
+}
+
+#[test]
+fn test_add_and_show_todo() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+
+    // Set environment variable for the test
+    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path());
+    std::env::set_var("EDITOR", "-");
+
+    // Add a TODO using the library
+    workingon::add_todo(Some("First TODO".to_string()));
+
+    // Get the TODO ID directly from the database
+    let (todo_id, _todo) = get_latest_todo().expect("No todo found");
+
+    println!("{}", todo_id);
+
+    // Verify the TODO was added by listing
+    Command::cargo_bin("workingon").unwrap()
+    .env("EDITOR", "-")
+    .env("WORKINGON_DATA_DIR", tmp_dir.path())
+    .args(["ls"])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("First TODO"));
+
+    // Show the TODO using the library
+    workingon::show_todo(todo_id);
 }
