@@ -1,10 +1,10 @@
-use rstest::rstest;
 use assert_cmd::Command;
-use predicates::prelude::*;
-use tempdir::TempDir;
-use workingon::{establish_connection, encode_id};
-use workingon::schema::todos::dsl::*;
 use diesel::prelude::*;
+use predicates::prelude::*;
+use rstest::rstest;
+use tempdir::TempDir;
+use workingon::schema::todos::dsl::*;
+use workingon::{encode_id, establish_connection};
 
 // Helper function to get the latest TODO from the database
 fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
@@ -30,74 +30,72 @@ fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
 #[case("-v")]
 #[case("--version")]
 fn test_version_command(#[case] command: &str) {
-    Command::cargo_bin("workingon").unwrap()
-    .args([
-        command,
-    ])
-    .assert()
-    .success()
-    .stdout(
-        predicate::str::starts_with(
-            "workingon version",
-        )
-    );
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .args([command])
+        .assert()
+        .success()
+        .stdout(predicate::str::starts_with("workingon version"));
 }
 
 #[rstest]
 fn test_locate_db() {
-    Command::cargo_bin("workingon").unwrap()
-    .args([
-        "locate-db",
-    ])
-    .assert()
-    .success()
-    .stdout(
-        predicate::str::ends_with(
-            "todos.sqlite3\n",
-        )
-    );
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .args(["locate-db"])
+        .assert()
+        .success()
+        .stdout(predicate::str::ends_with("todos.sqlite3\n"));
 }
 
 #[rstest]
 fn test_help_command() {
-    Command::cargo_bin("workingon").unwrap()
-    .args(["--help"])
-    .assert()
-    .success()
-    .stdout(predicate::str::contains("CLI to track what you\'re working on"));
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .args(["--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "CLI to track what you\'re working on",
+        ));
 }
 
 #[test]
 fn test_list_empty() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
-    Command::cargo_bin("workingon").unwrap()
-    .env("WORKINGON_DATA_DIR", tmp_dir.path())
-    .args(["list"])
-    .assert()
-    .success()
-    .stdout(predicate::str::is_empty());
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_empty());
 }
 
 #[test]
 fn test_list_alias_ls() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
-    Command::cargo_bin("workingon").unwrap()
-    .env("WORKINGON_DATA_DIR", tmp_dir.path())
-    .args(["ls"])
-    .assert()
-    .success()
-    .stdout(predicate::str::is_empty());
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["ls"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_empty());
 }
 
 #[test]
 fn test_add_todo_with_title() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
     // Set a mock editor to avoid interactive prompts
-    Command::cargo_bin("workingon").unwrap()
-    .env("EDITOR", "-")
-    .args(["add", "Test TODO"])
-    .assert()
-    .success()
-    .stdout(predicate::str::contains("TODO added successfully"));
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["add", "Test TODO"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("TODO added successfully"));
 }
 
 #[test]
@@ -109,9 +107,9 @@ fn test_add_todo_without_title() {
     cmd.env("WORKINGON_DATA_DIR", tmp_dir.path());
 
     cmd.args(["add"])
-    .assert()
-    .success()
-    .stdout(predicate::str::contains("TODO added successfully"));
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("TODO added successfully"));
 }
 
 #[test]
@@ -122,27 +120,27 @@ fn test_add_and_list_todos() {
     cmd.env("EDITOR", "-");
     cmd.env("WORKINGON_DATA_DIR", tmp_dir.path());
 
-    cmd.args(["add", "First TODO"])
-    .assert()
-    .success();
+    cmd.args(["add", "First TODO"]).assert().success();
 
     // Add another TODO
-    Command::cargo_bin("workingon").unwrap()
-    .env("EDITOR", "-")
-    .env("WORKINGON_DATA_DIR", tmp_dir.path())
-    .args(["add", "Second TODO"])
-    .assert()
-    .success();
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["add", "Second TODO"])
+        .assert()
+        .success();
 
     // List TODOs
-    Command::cargo_bin("workingon").unwrap()
-    .env("EDITOR", "-")
-    .env("WORKINGON_DATA_DIR", tmp_dir.path())
-    .args(["list"])
-    .assert()
-    .success()
-    .stdout(predicate::str::contains("First TODO"))
-    .stdout(predicate::str::contains("Second TODO"));
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("First TODO"))
+        .stdout(predicate::str::contains("Second TODO"));
 }
 
 #[test]
@@ -162,13 +160,14 @@ fn test_add_and_show_todo() {
     println!("{}", todo_id);
 
     // Verify the TODO was added by listing
-    Command::cargo_bin("workingon").unwrap()
-    .env("EDITOR", "-")
-    .env("WORKINGON_DATA_DIR", tmp_dir.path())
-    .args(["ls"])
-    .assert()
-    .success()
-    .stdout(predicate::str::contains("First TODO"));
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["ls"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("First TODO"));
 
     // Show the TODO using the library
     workingon::show_todo(todo_id);
