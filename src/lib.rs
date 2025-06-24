@@ -1,79 +1,27 @@
+pub mod cli;
+pub mod constants;
 pub mod models;
 pub mod schema;
 
-use std::{io::{Read, Write}, str::FromStr};
-
-use self::schema::todos;
-
 use chrono::Utc;
-use clap::{Parser, Subcommand};
 use colored::Colorize;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs::data_dir;
-use models::{NewTodo, Todos};
 use sqids::Sqids;
+use std::{
+    io::{Read, Write},
+    str::FromStr,
+};
 
-const BIN: &str = env!("CARGO_PKG_NAME");
-const BIN_VERSION: &str = env!("CARGO_PKG_VERSION");
-const DEFAULT_EDITOR: &str = "vi";
+use self::constants::{BIN, DEFAULT_EDITOR};
+use self::models::{NewTodo, Todos};
+use self::schema::todos;
 
-const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
-
-#[derive(Parser)]
-#[command(
-    disable_version_flag = true,
-    disable_help_subcommand = true,
-    author,
-    version = get_version_str(),
-    about,
-    long_about = None,
-)]
-struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-    #[arg(
-        short = 'v',
-        long,
-        help = "Print version",
-        action = clap::builder::ArgAction::Version,
-    )]
-    version: (),
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Print version
-    Version,
-    /// locate database file
-    #[clap(hide = true)]
-    LocateDb,
-    /// add a TODO
-    Add {
-        /// title of the new TODO
-        #[clap()]
-        title: Option<String>,
-    },
-    /// list current TODOs
-    #[clap(visible_alias = "ls")]
-    List,
-    #[clap(visible_alias = "rm")]
-    Delete {
-        #[clap()]
-        id: String,
-    },
-    #[clap()]
-    Show {
-        #[clap()]
-        id: String,
-    },
-    #[clap()]
-    Edit {
-        #[clap()]
-        id: String,
-    },
-}
+// Constants only used in this file
+pub const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 fn get_squids() -> Sqids {
     Sqids::builder()
@@ -89,29 +37,16 @@ pub fn encode_id(i: u64) -> String {
 
 pub fn decode_id(s: &str) -> i32 {
     // TODO can I make this nicer?
-    (*get_squids()
-        .decode(s)
-        .first()
-        .expect("Couldn't decode id"))
-    .try_into()
-    .unwrap()
+    (*get_squids().decode(s).first().expect("Couldn't decode id"))
+        .try_into()
+        .unwrap()
 }
 
-fn get_version_str() -> String {
-    format!("version {}", BIN_VERSION)
-}
-
-fn print_version() {
-    println!("{} {}", BIN, get_version_str());
-}
-
-// TODO: make this return a Path
-fn get_project_data_folder() -> std::path::PathBuf {
+// Path-related functions
+pub fn get_project_data_folder() -> std::path::PathBuf {
     let env_var_name = format!("{}_data_dir", BIN).to_uppercase();
     match std::env::var(env_var_name) {
-        Ok(dd) => {
-            std::path::PathBuf::from_str(&dd).expect("Env var data dir is not a valid path")
-        },
+        Ok(dd) => std::path::PathBuf::from_str(&dd).expect("Env var data dir is not a valid path"),
         Err(_) => {
             let mut data_folder = data_dir().expect("Couldn't get data dir");
             data_folder.push(BIN);
@@ -124,21 +59,20 @@ fn get_project_data_folder() -> std::path::PathBuf {
     }
 }
 
-fn get_db_file() -> std::path::PathBuf {
+pub fn get_db_file() -> std::path::PathBuf {
     let mut db_file = get_project_data_folder();
     db_file.push("todos.sqlite3");
     db_file
 }
 
-fn get_todoeditmsg_file() -> std::path::PathBuf {
+pub fn get_todoeditmsg_file() -> std::path::PathBuf {
     let mut todo_file = get_project_data_folder();
     // TODO: we should clean this up if it's left behind at startup
     todo_file.push("TODO_EDITMSG");
-
     todo_file
 }
 
-fn get_editor() -> String {
+pub fn get_editor() -> String {
     let editor = std::env::var("EDITOR");
     match editor {
         Ok(editor) => editor,
@@ -146,15 +80,11 @@ fn get_editor() -> String {
     }
 }
 
-fn print_db_file() {
-    println!("{}", get_db_file().display())
-}
-
+// Database operations
 pub fn establish_connection() -> SqliteConnection {
     let database_url = get_db_file().display().to_string();
     let mut conn = SqliteConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
-    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
     //TODO: a match here could perform log a message for successful migrations
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Migrations couldn't be run");
@@ -201,7 +131,8 @@ pub fn create_temp_todo_file_open_and_then_read_remove_process(
         let mut not_comments = buf.lines().filter(|e| !e.trim_start().starts_with("#"));
         final_title = not_comments
             .next()
-            .expect("Couldn't find title of new TODO").to_string();
+            .expect("Couldn't find title of new TODO")
+            .to_string();
         let notes: Vec<&str> = not_comments.collect();
         full_notes = notes.join("\n");
         full_notes = full_notes
@@ -214,6 +145,7 @@ pub fn create_temp_todo_file_open_and_then_read_remove_process(
     (final_title.to_string(), full_notes)
 }
 
+// High-level database operations
 pub fn add_todo(title: Option<String>) {
     // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
     //  don't forget multiline messages with multiple -m's
@@ -223,11 +155,8 @@ pub fn add_todo(title: Option<String>) {
     };
     let p_buff = get_todoeditmsg_file();
     let fp = p_buff.as_path();
-    let (title, notes) = create_temp_todo_file_open_and_then_read_remove_process(
-        fp,
-        title_str,
-        String::new(),
-    );
+    let (title, notes) =
+        create_temp_todo_file_open_and_then_read_remove_process(fp, title_str, String::new());
     let connection = &mut establish_connection();
     let new_todo = NewTodo {
         title: title.as_str(),
@@ -314,35 +243,4 @@ pub fn delete_todo(delete_id: String) {
         .execute(connection)
         .expect("Error loading posts");
     println!("Post with id {} was deleted", delete_id);
-}
-
-// TODO: make this private?
-pub fn run_cli() {
-    let cli = Cli::parse();
-
-    match &cli.command {
-        Some(Commands::Version) => {
-            print_version();
-        }
-        Some(Commands::LocateDb) => {
-            print_db_file();
-        }
-        Some(Commands::Add { title }) => {
-            // TODO: maybe don't clone here
-            add_todo(title.clone());
-        }
-        Some(Commands::List {}) => {
-            list_todos();
-        }
-        Some(Commands::Delete { id }) => {
-            delete_todo(id.to_string());
-        }
-        Some(Commands::Show { id }) => {
-            show_todo(id.to_string());
-        }
-        Some(Commands::Edit { id }) => {
-            edit_todo(id.to_string());
-        }
-        None => {}
-    }
 }
