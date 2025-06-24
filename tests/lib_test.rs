@@ -1,4 +1,5 @@
 use diesel::prelude::*;
+use serial_test::serial;
 use std::env;
 use tempdir::TempDir;
 use workingon::*;
@@ -18,6 +19,7 @@ fn cleanup_test_env() {
 }
 
 #[test]
+#[serial]
 fn test_encode_id() {
     let encoded = encode_id(1);
     assert!(!encoded.is_empty());
@@ -28,6 +30,7 @@ fn test_encode_id() {
 }
 
 #[test]
+#[serial]
 fn test_decode_id() {
     let original_id = 42;
     let encoded = encode_id(original_id);
@@ -36,6 +39,7 @@ fn test_decode_id() {
 }
 
 #[test]
+#[serial]
 fn test_encode_decode_roundtrip() {
     let test_cases = vec![1, 100, 1000, 9999];
     for id in test_cases {
@@ -46,6 +50,7 @@ fn test_encode_decode_roundtrip() {
 }
 
 #[test]
+#[serial]
 fn test_get_project_data_folder_with_env_var() {
     let _tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
     let env_var_name = format!("{}_data_dir", workingon::constants::BIN).to_uppercase();
@@ -58,6 +63,7 @@ fn test_get_project_data_folder_with_env_var() {
 }
 
 #[test]
+#[serial]
 fn test_get_project_data_folder_without_env_var() {
     // Clean up any existing env var
     let env_var_name = format!("{}_data_dir", workingon::constants::BIN).to_uppercase();
@@ -70,6 +76,7 @@ fn test_get_project_data_folder_without_env_var() {
 }
 
 #[test]
+#[serial]
 fn test_get_db_file() {
     let _tmp_dir = setup_test_env();
     let db_file = get_db_file();
@@ -81,6 +88,7 @@ fn test_get_db_file() {
 }
 
 #[test]
+#[serial]
 fn test_get_todoeditmsg_file() {
     let _tmp_dir = setup_test_env();
     let todo_file = get_todoeditmsg_file();
@@ -92,6 +100,7 @@ fn test_get_todoeditmsg_file() {
 }
 
 #[test]
+#[serial]
 fn test_get_editor_with_env_var() {
     env::set_var("EDITOR", "nano");
     let editor = get_editor();
@@ -100,6 +109,7 @@ fn test_get_editor_with_env_var() {
 }
 
 #[test]
+#[serial]
 fn test_get_editor_without_env_var() {
     env::remove_var("EDITOR");
     let editor = get_editor();
@@ -107,6 +117,7 @@ fn test_get_editor_without_env_var() {
 }
 
 #[test]
+#[serial]
 fn test_establish_connection() {
     let _tmp_dir = setup_test_env();
 
@@ -118,6 +129,7 @@ fn test_establish_connection() {
 }
 
 #[test]
+#[serial]
 fn test_create_temp_todo_file_with_editor_dash() {
     let _tmp_dir = setup_test_env();
     let test_file = _tmp_dir.path().join("test_todo.txt");
@@ -136,6 +148,7 @@ fn test_create_temp_todo_file_with_editor_dash() {
 }
 
 #[test]
+#[serial]
 fn test_create_temp_todo_file_with_real_editor() {
     let _tmp_dir = setup_test_env();
     let test_file = _tmp_dir.path().join("test_todo.txt");
@@ -158,6 +171,7 @@ fn test_create_temp_todo_file_with_real_editor() {
 }
 
 #[test]
+#[serial]
 fn test_add_todo_with_title() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
@@ -180,6 +194,7 @@ fn test_add_todo_with_title() {
 }
 
 #[test]
+#[serial]
 fn test_add_todo_without_title() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
@@ -202,6 +217,7 @@ fn test_add_todo_without_title() {
 }
 
 #[test]
+#[serial]
 fn test_show_todo() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
@@ -226,6 +242,8 @@ fn test_show_todo() {
     cleanup_test_env();
 }
 
+#[test]
+#[serial]
 fn test_list_todos() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
@@ -242,6 +260,7 @@ fn test_list_todos() {
 }
 
 #[test]
+#[serial]
 fn test_delete_todo() {
     let _tmp_dir = setup_test_env();
 
@@ -274,6 +293,7 @@ fn test_delete_todo() {
 }
 
 #[test]
+#[serial]
 fn test_edit_todo() {
     let _tmp_dir = setup_test_env();
 
