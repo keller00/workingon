@@ -4,7 +4,7 @@ use predicates::prelude::*;
 use rstest::rstest;
 use tempdir::TempDir;
 use workingon::schema::todos::dsl::*;
-use workingon::{add_todo, encode_id, establish_connection, show_todo};
+use workingon::{encode_id, establish_connection};
 
 // Helper function to get the latest TODO from the database
 fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
@@ -86,10 +86,12 @@ fn test_list_alias_ls() {
 
 #[test]
 fn test_add_todo_with_title() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
     // Set a mock editor to avoid interactive prompts
     Command::cargo_bin("workingon")
         .unwrap()
         .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
         .args(["add", "Test TODO"])
         .assert()
         .success()
@@ -150,7 +152,7 @@ fn test_add_and_show_todo() {
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    add_todo(Some("First TODO".to_string()));
+    workingon::add_todo(Some("First TODO".to_string()));
 
     // Get the TODO ID directly from the database
     let (todo_id, _todo) = get_latest_todo().expect("No todo found");
@@ -168,5 +170,5 @@ fn test_add_and_show_todo() {
         .stdout(predicate::str::contains("First TODO"));
 
     // Show the TODO using the library
-    show_todo(todo_id);
+    workingon::show_todo(todo_id);
 }
