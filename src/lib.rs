@@ -110,7 +110,6 @@ pub fn create_temp_todo_file_open_and_then_read_remove_process(
     let mut final_title = title;
     let mut full_notes = notes;
     let editor = get_editor();
-    println!("{}", editor);
     if editor != "-" {
         let mut file = std::fs::File::create(fp)
             .unwrap_or_else(|_| panic!("File {} couldn't be created", fp.display()));
