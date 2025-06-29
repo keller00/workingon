@@ -14,7 +14,11 @@ readme = "README.md"
 chrono = "0.4.38"
 clap = { version = "4.4.2", features = ["derive", "string"] }
 colored = "2.2.0"
-diesel = { version = "2.2.1", features = ["chrono", "sqlite", "returning_clauses_for_sqlite_3_35"] }
+diesel = { version = "2.2.1", features = [
+  "chrono",
+  "sqlite",
+  "returning_clauses_for_sqlite_3_35",
+] }
 diesel_migrations = "2.2.0"
 dirs = "5.0.1"
 sqids = "0.4.1"

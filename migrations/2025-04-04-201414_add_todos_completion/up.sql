@@ -1,0 +1,7 @@
+ALTER TABLE `todos`
+ADD COLUMN `completed` TIMESTAMPTZSQLITE DEFAULT NULL
+;
+
+ALTER TABLE `todos`
+RENAME COLUMN `created_on` TO `created`
+;
