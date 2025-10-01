@@ -53,6 +53,11 @@ enum Commands {
         #[clap()]
         id: String,
     },
+    #[clap()]
+    Complete {
+        #[clap()]
+        id: String,
+    },
 }
 
 fn get_version_str() -> String {
@@ -93,6 +98,9 @@ pub fn run_cli() {
         }
         Some(Commands::Edit { id }) => {
             crate::edit_todo(id.to_string());
+        }
+        Some(Commands::Complete { id }) => {
+            crate::complete_todo(id.to_string());
         }
         None => {}
     }
