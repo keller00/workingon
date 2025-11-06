@@ -9,6 +9,7 @@ use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs::data_dir;
+use models::{NewTodo, Todos};
 use sqids::Sqids;
 use std::{
     io::{Read, Write},
@@ -16,28 +17,27 @@ use std::{
 };
 
 use self::constants::{BIN, DEFAULT_EDITOR};
-use self::models::{NewTodo, Todos};
 use self::schema::todos;
 
 // Constants only used in this file
 pub const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-fn get_squids() -> Sqids {
+fn create_sqids_encoder_with_custom_alphabet() -> Sqids {
     Sqids::builder()
         .min_length(5)
         .alphabet("1234567890abcdefghijklmnopqrstuvwxyz".chars().collect())
         .build()
-        .expect("Couldn't get squids")
+        .expect("Failed to create Sqids encoder with custom alphabet configuration")
 }
 
 pub fn encode_id(i: u64) -> String {
-    get_squids().encode(&vec![i]).expect("Problem encoding id")
+    create_sqids_encoder_with_custom_alphabet().encode(&vec![i]).expect("Problem encoding id")
 }
 
 pub fn decode_id(s: &str) -> i32 {
     // TODO can I make this nicer?
-    (*get_squids().decode(s).first().expect("Couldn't decode id"))
+    (*create_sqids_encoder_with_custom_alphabet().decode(s).first().expect("Couldn't decode id"))
         .try_into()
         .unwrap()
 }
@@ -160,7 +160,7 @@ pub fn add_todo(title: Option<String>) {
     let new_todo = NewTodo {
         title: title.as_str(),
         notes: notes.as_str(),
-        created_on: Utc::now(),
+        created: Utc::now(),
     };
     diesel::insert_into(todos::table)
         .values(&new_todo)
@@ -184,7 +184,23 @@ pub fn show_todo(show_id: String) {
         "TODO to show couldn't be found {}",
         found_todos.len()
     );
-    println!("{}\n{}", found_todos[0].title, found_todos[0].notes);
+    let completed_str = found_todos[0].completed.map(|c| c.to_string()).unwrap_or("not yet".to_string());
+    println!("{}\n{}\nIt was completed on: {}",
+        found_todos[0].title,
+        found_todos[0].notes,
+        completed_str,
+    );
+}
+
+pub fn complete_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    diesel::update(todos.find(decoded_id))
+        .set(completed.eq(Utc::now()))
+        .execute(connection)
+        .expect("TODO couldn't be completed");
+    println!("TODO was completed")
 }
 
 pub fn edit_todo(show_id: String) {
@@ -216,11 +232,16 @@ pub fn edit_todo(show_id: String) {
     println!("TODO updated successfully")
 }
 
-pub fn list_todos() {
+pub fn list_todos(show_completed: Option<bool>) {
+    let s_completed = show_completed.unwrap_or(false);
     use self::schema::todos::dsl::*;
+    use diesel::sqlite::Sqlite;
     let connection = &mut establish_connection();
-    let results = todos
-        .select(Todos::as_select())
+    let mut query = todos.select(Todos::as_select()).into_boxed::<Sqlite>();
+    if !s_completed {
+        query = query.filter(completed.is_null());
+    }
+    let results = query
         .order_by(id.desc())
         .limit(5)
         .load(connection)

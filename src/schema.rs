@@ -3,6 +3,7 @@ diesel::table! {
         id -> Integer,
         title -> Text,
         notes -> Text,
-        created_on -> diesel::sql_types::TimestamptzSqlite,
+        created -> diesel::sql_types::TimestamptzSqlite,
+        completed -> diesel::sql_types::Nullable<diesel::sql_types::TimestamptzSqlite>,
     }
 }
