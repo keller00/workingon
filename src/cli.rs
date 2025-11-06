@@ -115,6 +115,9 @@ pub fn run_cli() {
         Some(Commands::Complete { id }) => {
             crate::complete_todo(id.to_string());
         }
+        Some(Commands::Reopen { id }) => {
+            crate::reopen_todo(id.to_string());
+        }
         None => {}
     }
 }

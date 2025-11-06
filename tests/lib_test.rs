@@ -7,7 +7,7 @@ use workingon::*;
 // Helper function to set up a test environment
 fn setup_test_env() -> TempDir {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
-    env::set_var("WORKINGON_DATA_DIR", tmp_dir.path());
+    env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
     env::set_var("EDITOR", "-");
     tmp_dir
 }
@@ -313,6 +313,133 @@ fn test_edit_todo() {
 
     // Edit the TODO
     edit_todo(todo_id);
+
+    cleanup_test_env();
+}
+
+#[test]
+#[serial]
+fn test_complete_todo() {
+    let _tmp_dir = setup_test_env();
+    env::set_var("EDITOR", "-"); // Ensure editor is set to dash
+
+    // Add a TODO first
+    add_todo(Some("Complete Test TODO".to_string()));
+
+    // Get the TODO ID
+    let connection = &mut establish_connection();
+    use workingon::schema::todos::dsl::*;
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(title.eq("Complete Test TODO"))
+        .load(connection)
+        .expect("Error loading todos");
+
+    let todo_id = encode_id(results[0].id.try_into().unwrap());
+
+    // Verify it's not completed initially
+    assert!(results[0].completed.is_none());
+
+    // Complete the TODO
+    complete_todo(todo_id.clone());
+
+    // Verify it's now completed
+    let completed_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(results[0].id))
+        .load(connection)
+        .expect("Error loading todos");
+
+    assert_eq!(completed_results.len(), 1);
+    assert!(completed_results[0].completed.is_some());
+
+    cleanup_test_env();
+}
+
+#[test]
+#[serial]
+fn test_reopen_todo() {
+    let _tmp_dir = setup_test_env();
+    env::set_var("EDITOR", "-"); // Ensure editor is set to dash
+
+    // Add a TODO first
+    add_todo(Some("Reopen Test TODO".to_string()));
+
+    // Get the TODO ID
+    let connection = &mut establish_connection();
+    use workingon::schema::todos::dsl::*;
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(title.eq("Reopen Test TODO"))
+        .load(connection)
+        .expect("Error loading todos");
+
+    let todo_id = encode_id(results[0].id.try_into().unwrap());
+
+    // Complete the TODO first
+    complete_todo(todo_id.clone());
+
+    // Verify it's completed
+    let completed_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(results[0].id))
+        .load(connection)
+        .expect("Error loading todos");
+
+    assert_eq!(completed_results.len(), 1);
+    assert!(completed_results[0].completed.is_some());
+
+    // Reopen the TODO
+    reopen_todo(todo_id);
+
+    // Verify it's now reopened (completed is None)
+    let reopened_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(results[0].id))
+        .load(connection)
+        .expect("Error loading todos");
+
+    assert_eq!(reopened_results.len(), 1);
+    assert!(reopened_results[0].completed.is_none());
+
+    cleanup_test_env();
+}
+
+#[test]
+#[serial]
+fn test_reopen_todo_already_uncompleted() {
+    let _tmp_dir = setup_test_env();
+    env::set_var("EDITOR", "-"); // Ensure editor is set to dash
+
+    // Add a TODO first
+    add_todo(Some("Reopen Uncompleted Test TODO".to_string()));
+
+    // Get the TODO ID
+    let connection = &mut establish_connection();
+    use workingon::schema::todos::dsl::*;
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(title.eq("Reopen Uncompleted Test TODO"))
+        .load(connection)
+        .expect("Error loading todos");
+
+    let todo_id = encode_id(results[0].id.try_into().unwrap());
+
+    // Verify it's not completed initially
+    assert!(results[0].completed.is_none());
+
+    // Reopen the TODO (even though it's not completed)
+    reopen_todo(todo_id);
+
+    // Verify it's still uncompleted (completed is None)
+    let reopened_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(results[0].id))
+        .load(connection)
+        .expect("Error loading todos");
+
+    assert_eq!(reopened_results.len(), 1);
+    assert!(reopened_results[0].completed.is_none());
 
     cleanup_test_env();
 }
