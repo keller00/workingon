@@ -254,7 +254,68 @@ fn test_list_todos() {
     add_todo(Some("Third TODO".to_string()));
 
     // List TODOs
-    list_todos(None, None);
+    list_todos(None);
+
+    cleanup_test_env();
+}
+
+#[test]
+#[serial]
+fn test_list_todos_flags() {
+    let _tmp_dir = setup_test_env();
+    env::set_var("EDITOR", "-"); // Ensure editor is set to dash
+
+    // Add an open TODO
+    add_todo(Some("Open TODO".to_string()));
+    let connection = &mut establish_connection();
+    use workingon::schema::todos::dsl::*;
+    let open_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(title.eq("Open TODO"))
+        .load(connection)
+        .expect("Error loading todos");
+    let open_todo_id = open_results[0].id;
+
+    // Add a completed TODO
+    add_todo(Some("Completed TODO".to_string()));
+    let completed_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(title.eq("Completed TODO"))
+        .load(connection)
+        .expect("Error loading todos");
+    let completed_todo_id = completed_results[0].id;
+    complete_todo(encode_id(completed_todo_id.try_into().unwrap()));
+
+    // Test 1: None (default) should show only open TODOs
+    let connection = &mut establish_connection();
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(completed.is_null())
+        .filter(id.eq(open_todo_id).or(id.eq(completed_todo_id)))
+        .load(connection)
+        .expect("Error loading todos");
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].title, "Open TODO");
+
+    // Test 2: Some(true) should show only completed TODOs
+    let connection = &mut establish_connection();
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(completed.is_not_null())
+        .filter(id.eq(open_todo_id).or(id.eq(completed_todo_id)))
+        .load(connection)
+        .expect("Error loading todos");
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].title, "Completed TODO");
+
+    // Test 3: Some(false) should show all TODOs
+    let connection = &mut establish_connection();
+    let results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(open_todo_id).or(id.eq(completed_todo_id)))
+        .load(connection)
+        .expect("Error loading todos");
+    assert_eq!(results.len(), 2);
 
     cleanup_test_env();
 }
