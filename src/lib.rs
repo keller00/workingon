@@ -23,21 +23,21 @@ use self::schema::todos;
 pub const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-fn get_squids() -> Sqids {
+fn create_sqids_encoder_with_custom_alphabet() -> Sqids {
     Sqids::builder()
         .min_length(5)
         .alphabet("1234567890abcdefghijklmnopqrstuvwxyz".chars().collect())
         .build()
-        .expect("Couldn't get squids")
+        .expect("Failed to create Sqids encoder with custom alphabet configuration")
 }
 
 pub fn encode_id(i: u64) -> String {
-    get_squids().encode(&vec![i]).expect("Problem encoding id")
+    create_sqids_encoder_with_custom_alphabet().encode(&vec![i]).expect("Problem encoding id")
 }
 
 pub fn decode_id(s: &str) -> i32 {
     // TODO can I make this nicer?
-    (*get_squids().decode(s).first().expect("Couldn't decode id"))
+    (*create_sqids_encoder_with_custom_alphabet().decode(s).first().expect("Couldn't decode id"))
         .try_into()
         .unwrap()
 }
