@@ -232,14 +232,21 @@ pub fn edit_todo(show_id: String) {
     println!("TODO updated successfully")
 }
 
-pub fn list_todos(show_completed: Option<bool>) {
+pub fn list_todos(
+    show_completed: Option<bool>,
+    show_open: Option<bool>,
+) {
     let s_completed = show_completed.unwrap_or(false);
+    let s_open = show_open.unwrap_or(false);
     use self::schema::todos::dsl::*;
     use diesel::sqlite::Sqlite;
     let connection = &mut establish_connection();
     let mut query = todos.select(Todos::as_select()).into_boxed::<Sqlite>();
-    if !s_completed {
+    if !s_completed && s_open {
         query = query.filter(completed.is_null());
+    } else if !s_open && s_completed {
+        query = query.filter(completed.is_not_null());
+        
     }
     let results = query
         .order_by(id.desc())
