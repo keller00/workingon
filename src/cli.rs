@@ -37,7 +37,10 @@ enum Commands {
     },
     /// list current TODOs
     #[clap(visible_alias = "ls")]
-    List,
+    List {
+        #[arg(long, action = clap::builder::ArgAction::SetTrue)]
+        show_completed: bool,
+    },
     #[clap(visible_alias = "rm")]
     Delete {
         #[clap()]
@@ -87,8 +90,8 @@ pub fn run_cli() {
             // TODO: maybe don't clone here
             crate::add_todo(title.clone());
         }
-        Some(Commands::List {}) => {
-            crate::list_todos();
+        Some(Commands::List { show_completed }) => {
+            crate::list_todos(if *show_completed { Some(true) } else { None });
         }
         Some(Commands::Delete { id }) => {
             crate::delete_todo(id.to_string());
