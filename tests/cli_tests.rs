@@ -234,3 +234,87 @@ fn test_complete_and_reopen_todo() {
     assert_eq!(reopened_results.len(), 1);
     assert!(reopened_results[0].completed.is_none());
 }
+
+#[test]
+#[serial]
+fn test_list_flags_precedence() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+
+    // Set environment variable for the test
+    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var("EDITOR", "-");
+
+    // Add an open TODO
+    workingon::add_todo(Some("Open TODO".to_string()));
+
+    // Add a completed TODO
+    workingon::add_todo(Some("Completed TODO".to_string()));
+    let (completed_todo_id, _) = get_latest_todo().expect("No todo found");
+    workingon::complete_todo(completed_todo_id);
+
+    // Test 1: Default (no flags) should show only open TODOs
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Completed TODO").not());
+
+    // Test 2: --open flag should show only open TODOs (same as default)
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--open"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Completed TODO").not());
+
+    // Test 3: --completed flag should show only completed TODOs
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--completed"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Open TODO").not())
+        .stdout(predicate::str::contains("Completed TODO"));
+
+    // Test 4: --all flag should show both completed and open TODOs
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--all"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Completed TODO"));
+
+    // Test 5: --all takes precedence over --completed
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--all", "--completed"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Completed TODO"));
+
+    // Test 6: --all takes precedence over --open
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--all", "--open"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Completed TODO"));
+}

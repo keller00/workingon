@@ -35,18 +35,18 @@ enum Commands {
         #[clap()]
         title: Option<String>,
     },
-    /// list current TODOs
+    /// list current TODOs (default: shows open/uncompleted TODOs)
     #[clap(visible_alias = "ls")]
     List {
+        /// show only completed TODOs
         #[arg(long, action = clap::builder::ArgAction::SetTrue)]
-        /// shows both completed and open TODOs, overwrites other flags
-        all: bool,
-        #[arg(long, action = clap::builder::ArgAction::SetTrue)]
-        /// shows only completed TODOs
         completed: bool,
+        /// show only open TODOs (this is the default behavior)
         #[arg(long, action = clap::builder::ArgAction::SetTrue)]
-        /// shows only open TODOs
         open: bool,
+        /// show both completed and open TODOs, overwrites other flags
+        #[arg(long, action = clap::builder::ArgAction::SetTrue)]
+        all: bool,
     },
     #[clap(visible_alias = "rm")]
     /// remove a TODO
@@ -107,11 +107,17 @@ pub fn run_cli() {
             // TODO: maybe don't clone here
             crate::add_todo(title.clone());
         }
-        Some(Commands::List { all, completed , open}) => {
+        Some(Commands::List { all, completed, open: _ }) => {
+            // Priority: --all > --completed > default (--open)
             if *all {
-                crate::list_todos(Some(true), Some(true));
+                // Show all TODOs
+                crate::list_todos(Some(false));
+            } else if *completed {
+                // Show only completed TODOs
+                crate::list_todos(Some(true));
             } else {
-                crate::list_todos(Some(*completed), Some(*open));
+                // Default: show open (uncompleted) TODOs
+                crate::list_todos(None);
             }
         }
         Some(Commands::Delete { id }) => {

@@ -244,25 +244,32 @@ pub fn edit_todo(show_id: String) {
     println!("TODO updated successfully")
 }
 
-pub fn list_todos(
-    show_completed: Option<bool>,
-    show_open: Option<bool>,
-) {
-    let s_completed = show_completed.unwrap_or(false);
-    let s_open = show_open.unwrap_or(false);
+pub fn list_todos(show_completed: Option<bool>) {
     use self::schema::todos::dsl::*;
     use diesel::sqlite::Sqlite;
     let connection = &mut establish_connection();
     let mut query = todos.select(Todos::as_select()).into_boxed::<Sqlite>();
-    if !s_completed && s_open {
-        query = query.filter(completed.is_null());
-    } else if !s_open && s_completed {
-        query = query.filter(completed.is_not_null());
-        
+    
+    // show_completed parameter:
+    // - None: show open (uncompleted) TODOs (default behavior)
+    // - Some(true): show only completed TODOs
+    // - Some(false): show all TODOs (both completed and open)
+    match show_completed {
+        Some(true) => {
+            // Show only completed TODOs
+            query = query.filter(completed.is_not_null());
+        }
+        Some(false) => {
+            // Show all TODOs (no filter)
+        }
+        None => {
+            // Default: show only open (uncompleted) TODOs
+            query = query.filter(completed.is_null());
+        }
     }
+    
     let results = query
         .order_by(id.desc())
-        .limit(5)
         .load(connection)
         .expect("Error loading posts");
     for post in results {
