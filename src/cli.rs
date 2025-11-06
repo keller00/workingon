@@ -42,22 +42,32 @@ enum Commands {
         show_completed: bool,
     },
     #[clap(visible_alias = "rm")]
+    /// remove a TODO
     Delete {
         #[clap()]
         id: String,
     },
     #[clap()]
+    /// show information about a TODO
     Show {
         #[clap()]
         id: String,
     },
     #[clap()]
+    /// edit a TODO
     Edit {
         #[clap()]
         id: String,
     },
     #[clap()]
+    /// complete a TODO
     Complete {
+        #[clap()]
+        id: String,
+    },
+    #[clap()]
+    /// reopen a TODO
+    Reopen {
         #[clap()]
         id: String,
     },
