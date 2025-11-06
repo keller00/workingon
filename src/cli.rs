@@ -49,22 +49,32 @@ enum Commands {
         open: bool,
     },
     #[clap(visible_alias = "rm")]
+    /// remove a TODO
     Delete {
         #[clap()]
         id: String,
     },
     #[clap()]
+    /// show information about a TODO
     Show {
         #[clap()]
         id: String,
     },
     #[clap()]
+    /// edit a TODO
     Edit {
         #[clap()]
         id: String,
     },
     #[clap()]
+    /// complete a TODO
     Complete {
+        #[clap()]
+        id: String,
+    },
+    #[clap()]
+    /// reopen a TODO
+    Reopen {
         #[clap()]
         id: String,
     },
@@ -115,6 +125,9 @@ pub fn run_cli() {
         }
         Some(Commands::Complete { id }) => {
             crate::complete_todo(id.to_string());
+        }
+        Some(Commands::Reopen { id }) => {
+            crate::reopen_todo(id.to_string());
         }
         None => {}
     }

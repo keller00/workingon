@@ -2,6 +2,7 @@ use assert_cmd::Command;
 use diesel::prelude::*;
 use predicates::prelude::*;
 use rstest::rstest;
+use serial_test::serial;
 use tempdir::TempDir;
 use workingon::schema::todos::dsl::*;
 use workingon::{encode_id, establish_connection};
@@ -144,11 +145,12 @@ fn test_add_and_list_todos() {
 }
 
 #[test]
+#[serial]
 fn test_add_and_show_todo() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
 
     // Set environment variable for the test
-    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path());
+    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
@@ -171,4 +173,64 @@ fn test_add_and_show_todo() {
 
     // Show the TODO using the library
     workingon::show_todo(todo_id);
+}
+
+#[test]
+#[serial]
+fn test_complete_and_reopen_todo() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+
+    // Set environment variable for the test
+    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var("EDITOR", "-");
+
+    // Add a TODO using the library
+    workingon::add_todo(Some("Complete and Reopen Test TODO".to_string()));
+
+    // Get the TODO ID directly from the database
+    let (todo_id, todo) = get_latest_todo().expect("No todo found");
+
+    // Verify it's not completed initially
+    assert!(todo.completed.is_none());
+
+    // Complete the TODO via CLI
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["complete", &todo_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("TODO was completed"));
+
+    // Verify it's completed by checking the database
+    let connection = &mut workingon::establish_connection();
+    let completed_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(todo.id))
+        .load(connection)
+        .expect("Error loading todos");
+
+    assert_eq!(completed_results.len(), 1);
+    assert!(completed_results[0].completed.is_some());
+
+    // Reopen the TODO via CLI
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["reopen", &todo_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("TODO was reopened"));
+
+    // Verify it's reopened by checking the database
+    let reopened_results = todos
+        .select(workingon::models::Todos::as_select())
+        .filter(id.eq(todo.id))
+        .load(connection)
+        .expect("Error loading todos");
+
+    assert_eq!(reopened_results.len(), 1);
+    assert!(reopened_results[0].completed.is_none());
 }

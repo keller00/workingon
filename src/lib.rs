@@ -203,6 +203,18 @@ pub fn complete_todo(show_id: String) {
     println!("TODO was completed")
 }
 
+pub fn reopen_todo(show_id: String) {
+    use self::schema::todos::dsl::*;
+    use chrono::DateTime;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(&show_id);
+    diesel::update(todos.find(decoded_id))
+        .set(completed.eq(None::<DateTime<Utc>>))
+        .execute(connection)
+        .expect("TODO couldn't be reopened");
+    println!("TODO was reopened")
+}
+
 pub fn edit_todo(show_id: String) {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
