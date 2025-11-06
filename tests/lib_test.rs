@@ -254,7 +254,7 @@ fn test_list_todos() {
     add_todo(Some("Third TODO".to_string()));
 
     // List TODOs
-    list_todos(None);
+    list_todos(None, None);
 
     cleanup_test_env();
 }

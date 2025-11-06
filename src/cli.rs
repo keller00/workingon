@@ -39,7 +39,14 @@ enum Commands {
     #[clap(visible_alias = "ls")]
     List {
         #[arg(long, action = clap::builder::ArgAction::SetTrue)]
-        show_completed: bool,
+        /// shows both completed and open TODOs, overwrites other flags
+        all: bool,
+        #[arg(long, action = clap::builder::ArgAction::SetTrue)]
+        /// shows only completed TODOs
+        completed: bool,
+        #[arg(long, action = clap::builder::ArgAction::SetTrue)]
+        /// shows only open TODOs
+        open: bool,
     },
     #[clap(visible_alias = "rm")]
     Delete {
@@ -90,8 +97,12 @@ pub fn run_cli() {
             // TODO: maybe don't clone here
             crate::add_todo(title.clone());
         }
-        Some(Commands::List { show_completed }) => {
-            crate::list_todos(if *show_completed { Some(true) } else { None });
+        Some(Commands::List { all, completed , open}) => {
+            if *all {
+                crate::list_todos(Some(true), Some(true));
+            } else {
+                crate::list_todos(Some(*completed), Some(*open));
+            }
         }
         Some(Commands::Delete { id }) => {
             crate::delete_todo(id.to_string());
