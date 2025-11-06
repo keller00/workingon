@@ -185,10 +185,10 @@ pub fn show_todo(show_id: String) {
         found_todos.len()
     );
     let completed_str = found_todos[0].completed.map(|c| c.to_string()).unwrap_or("not yet".to_string());
-    println!("{}\nIt was completed on: {}\n{}",
+    println!("{}\n{}\nIt was completed on: {}",
         found_todos[0].title,
-        completed_str,
         found_todos[0].notes,
+        completed_str,
     );
 }
 
