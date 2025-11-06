@@ -45,10 +45,11 @@ cargo run -- add-todo "this is a test"
 (this command will not stick around, it's just for testing purposes)
 
 ```shell
-$ cargo run -- list-todos
-this is a test
------------
 
-
+$ cargo run -- list
+tfuen Some other thing I need to do
+z4wf7 Feed the shrimps
+kvim4 Feed Sophia
+jioq4 Buy groceries
 
 ```
