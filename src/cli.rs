@@ -26,16 +26,16 @@ struct Cli {
 enum Commands {
     /// Print version
     Version,
-    /// locate database file
+    /// Locate database file
     #[clap(hide = true)]
     LocateDb,
-    /// add a TODO
+    /// Add a new TODO
     Add {
         /// title of the new TODO
         #[clap()]
         title: Option<String>,
     },
-    /// list current TODOs (default: shows open/uncompleted TODOs)
+    /// List current TODOs, flag priority: all > completed > open (default).
     #[clap(visible_alias = "ls")]
     List {
         /// show only completed TODOs
@@ -49,31 +49,31 @@ enum Commands {
         all: bool,
     },
     #[clap(visible_alias = "rm")]
-    /// remove a TODO
+    /// Remove a TODO
     Delete {
         #[clap()]
         id: String,
     },
     #[clap()]
-    /// show information about a TODO
+    /// Show information about a TODO
     Show {
         #[clap()]
         id: String,
     },
     #[clap()]
-    /// edit a TODO
+    /// Edit a TODO
     Edit {
         #[clap()]
         id: String,
     },
     #[clap()]
-    /// complete a TODO
+    /// Complete a TODO
     Complete {
         #[clap()]
         id: String,
     },
     #[clap()]
-    /// reopen a TODO
+    /// Reopen a done TODO
     Reopen {
         #[clap()]
         id: String,
