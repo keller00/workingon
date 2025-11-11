@@ -70,7 +70,7 @@ fn test_list_empty() {
         .args(["list"])
         .assert()
         .success()
-        .stdout(predicate::str::is_empty());
+        .stdout(predicate::str::contains("There's nothing to do currently :)"));
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn test_list_alias_ls() {
         .args(["ls"])
         .assert()
         .success()
-        .stdout(predicate::str::is_empty());
+        .stdout(predicate::str::contains("There's nothing to do currently :)"));
 }
 
 #[test]

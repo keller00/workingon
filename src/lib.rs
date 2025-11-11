@@ -272,12 +272,16 @@ pub fn list_todos(show_completed: Option<bool>) {
         .order_by(id.desc())
         .load(connection)
         .expect("Error loading posts");
-    for post in results {
-        println!(
-            "{} {}",
-            encode_id(post.id.try_into().unwrap()).yellow(),
-            post.title
-        );
+    if results.is_empty() {
+        println!("There's nothing to do currently :) Add a new one with `{} add`", BIN);
+    } else {
+        for post in results {
+            println!(
+                "{} {}",
+                encode_id(post.id.try_into().unwrap()).yellow(),
+                post.title
+            );
+        }
     }
 }
 
