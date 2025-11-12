@@ -1,6 +1,6 @@
 [package]
 name = "workingon"
-version = "0.0.1"
+version = "1.0.0"
 description = "CLI to track what you're working on"
 authors = ["Mark Keller"]
 edition = "2021"
