@@ -74,17 +74,16 @@ jobs:
         with:
           path: artifacts
 
-      - name: Zip Artifacts
+      - name: Prepare binaries
         run: |
           mkdir binaries
           mv artifacts/*/* binaries/
-          zip -r binaries.zip binaries
 
-      - name: Attach to Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: binaries.zip
-          asset_name: binaries.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+      - name: Upload individual binaries to Release
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          for binary in binaries/*; do
+            gh release upload "$TAG_NAME" "$binary" --clobber
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
