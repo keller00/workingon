@@ -36,6 +36,12 @@ workingon version|-v|--version                # Print version
 
 ## Getting started
 
+Install workingon with Homebrew:
+
+```shell
+brew install keller00/workingon-tap/workingon
+```
+
 ## Build the project
 
 ```shell
