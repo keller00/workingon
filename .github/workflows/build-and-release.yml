@@ -70,6 +70,8 @@ jobs:
     if: github.event_name == 'release'
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -81,9 +83,8 @@ jobs:
 
       - name: Upload individual binaries to Release
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
           for binary in binaries/*; do
-            gh release upload "$TAG_NAME" "$binary" --clobber
+            gh release upload ${{ github.event.release.tag_name }} "$binary" --clobber
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
