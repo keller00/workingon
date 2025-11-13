@@ -67,7 +67,7 @@ enum Commands {
         #[clap()]
         id: String,
     },
-    #[clap()]
+    #[clap(visible_alias = "done")]
     /// Complete a TODO
     Complete {
         #[clap()]
