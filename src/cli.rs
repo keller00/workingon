@@ -9,11 +9,11 @@ use clap::{Parser, Subcommand};
     version = get_version_str(),
     about,
     long_about = None,
-    arg_required_else_help=true,
+    arg_required_else_help = true,
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
     #[arg(
         short = 'v',
         long,
@@ -97,23 +97,23 @@ fn print_db_file() {
 pub fn run_cli() {
     let cli = Cli::parse();
 
-    match &cli.command {
-        Some(Commands::Version) => {
+    match cli.command {
+        Commands::Version => {
             print_version();
         }
-        Some(Commands::LocateDb) => {
+        Commands::LocateDb => {
             print_db_file();
         }
-        Some(Commands::Add { title }) => {
+        Commands::Add { title } => {
             // TODO: maybe don't clone here
             crate::add_todo(title.clone());
         }
-        Some(Commands::List { all, completed, open: _ }) => {
+        Commands::List { all, completed, open: _ } => {
             // Priority: --all > --completed > default (--open)
-            if *all {
+            if all {
                 // Show all TODOs
                 crate::list_todos(Some(false));
-            } else if *completed {
+            } else if completed {
                 // Show only completed TODOs
                 crate::list_todos(Some(true));
             } else {
@@ -121,21 +121,20 @@ pub fn run_cli() {
                 crate::list_todos(None);
             }
         }
-        Some(Commands::Delete { id }) => {
+        Commands::Delete { id } => {
             crate::delete_todo(id.to_string());
         }
-        Some(Commands::Show { id }) => {
+        Commands::Show { id } => {
             crate::show_todo(id.to_string());
         }
-        Some(Commands::Edit { id }) => {
+        Commands::Edit { id } => {
             crate::edit_todo(id.to_string());
         }
-        Some(Commands::Complete { id }) => {
+        Commands::Complete { id } => {
             crate::complete_todo(id.to_string());
         }
-        Some(Commands::Reopen { id }) => {
+        Commands::Reopen { id } => {
             crate::reopen_todo(id.to_string());
         }
-        None => {}
     }
 }
