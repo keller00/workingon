@@ -1,6 +1,7 @@
 # workingon
 
 [![Build and test](https://github.com/keller00/workingon/actions/workflows/coverage.yml/badge.svg)](https://github.com/keller00/workingon/actions/workflows/coverage.yml)
+![GitHub Release](https://img.shields.io/github/v/release/keller00/workingon)
 [![codecov](https://codecov.io/github/keller00/workingon/graph/badge.svg?token=OFRWWDT7BT)](https://codecov.io/github/keller00/workingon)
 
 Workingon is a way to manage TODOs right in your terminal with your own EDITOR.
