@@ -212,7 +212,7 @@ fn test_complete_and_reopen_todo() {
         .args(["complete", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TODO was completed"));
+        .stdout(predicate::str::contains("was completed, if this was a mistake reopen it with `"));
 
     // Verify it's completed by checking the database
     let connection = &mut workingon::establish_connection();
@@ -233,7 +233,7 @@ fn test_complete_and_reopen_todo() {
         .args(["reopen", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TODO was reopened"));
+        .stdout(predicate::str::contains("was reopened, if this was a mistake complete it with `"));
 
     // Verify it's reopened by checking the database
     let reopened_results = todos
