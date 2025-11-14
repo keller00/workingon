@@ -107,7 +107,7 @@ fn test_add_todo_with_title() {
         .args(["add", "Test TODO"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TODO added successfully"));
+        .stdout(predicate::str::is_match("new TODO `.+` was created").unwrap());
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn test_add_todo_without_title() {
     cmd.args(["add"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TODO added successfully"));
+        .stdout(predicate::str::is_match("new TODO `.+` was created").unwrap());
 }
 
 #[test]
