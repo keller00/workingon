@@ -61,6 +61,17 @@ fn test_help_command() {
         ));
 }
 
+#[rstest]
+fn test_no_command() {
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains(
+            "CLI to track what you\'re working on",
+        ));
+}
+
 #[test]
 fn test_list_empty() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
