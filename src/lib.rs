@@ -162,12 +162,12 @@ pub fn add_todo(title: Option<String>) {
         notes: notes.as_str(),
         created: Utc::now(),
     };
-    diesel::insert_into(todos::table)
+    let created_todo = diesel::insert_into(todos::table)
         .values(&new_todo)
         .returning(Todos::as_returning())
         .get_result(connection)
         .expect("Error saving new TODO");
-    println!("TODO added successfully");
+    println!("new TODO `{}` was created", encode_id(created_todo.id.try_into().unwrap()));
 }
 
 pub fn show_todo(show_id: String) {
