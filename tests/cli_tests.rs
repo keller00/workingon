@@ -107,7 +107,7 @@ fn test_add_todo_with_title() {
         .args(["add", "Test TODO"])
         .assert()
         .success()
-        .stdout(predicate::str::is_match("new TODO `.+` was created").unwrap());
+        .stdout(predicate::str::is_match(".+ created").unwrap());
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn test_add_todo_without_title() {
     cmd.args(["add"])
         .assert()
         .success()
-        .stdout(predicate::str::is_match("new TODO `.+` was created").unwrap());
+        .stdout(predicate::str::is_match(".+ created").unwrap());
 }
 
 #[test]
@@ -212,7 +212,7 @@ fn test_complete_and_reopen_todo() {
         .args(["complete", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("was completed, if this was a mistake reopen it with `"));
+        .stdout(predicate::str::contains("completed, if this was a mistake reopen with `"));
 
     // Verify it's completed by checking the database
     let connection = &mut workingon::establish_connection();
@@ -233,7 +233,7 @@ fn test_complete_and_reopen_todo() {
         .args(["reopen", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("was reopened, if this was a mistake complete it with `"));
+        .stdout(predicate::str::contains("reopened, if this was a mistake complete with `"));
 
     // Verify it's reopened by checking the database
     let reopened_results = todos

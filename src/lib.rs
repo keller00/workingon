@@ -167,7 +167,7 @@ pub fn add_todo(title: Option<String>) {
         .returning(Todos::as_returning())
         .get_result(connection)
         .expect("Error saving new TODO");
-    println!("new TODO `{}` was created", encode_id(created_todo.id.try_into().unwrap()));
+    println!("{} created", encode_id(created_todo.id.try_into().unwrap()));
 }
 
 pub fn show_todo(show_id: String) {
@@ -200,7 +200,7 @@ pub fn complete_todo(show_id: String) {
         .set(completed.eq(Utc::now()))
         .execute(connection)
         .expect("TODO couldn't be completed");
-    println!("{} was completed, if this was a mistake reopen it with `{} reopen {}`", show_id, BIN, show_id)
+    println!("{} completed, if this was a mistake reopen with `{} reopen {}`", show_id, BIN, show_id)
 }
 
 pub fn reopen_todo(show_id: String) {
@@ -212,7 +212,7 @@ pub fn reopen_todo(show_id: String) {
         .set(completed.eq(None::<DateTime<Utc>>))
         .execute(connection)
         .expect("TODO couldn't be reopened");
-    println!("{} was reopened, if this was a mistake complete it with `{} complete {}`", show_id, BIN, show_id)
+    println!("{} reopened, if this was a mistake complete with `{} complete {}`", show_id, BIN, show_id)
 }
 
 pub fn edit_todo(show_id: String) {
@@ -241,7 +241,7 @@ pub fn edit_todo(show_id: String) {
         .set((title.eq(t), notes.eq(n)))
         .execute(connection)
         .expect("Was unable to update TODO");
-    println!("TODO updated successfully")
+    println!("{} updated", show_id)
 }
 
 pub fn list_todos(show_completed: Option<bool>) {
@@ -292,5 +292,5 @@ pub fn delete_todo(delete_id: String) {
     diesel::delete(todos.filter(id.eq(decoded_id)))
         .execute(connection)
         .expect("Error loading posts");
-    println!("Post with id {} was deleted", delete_id);
+    println!("{} deleted", delete_id);
 }
