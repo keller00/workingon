@@ -167,7 +167,7 @@ pub fn add_todo(title: Option<String>) {
         .returning(Todos::as_returning())
         .get_result(connection)
         .expect("Error saving new TODO");
-    println!("{} created", encode_id(created_todo.id.try_into().unwrap()));
+    println!("{} created", encode_id(created_todo.id.try_into().unwrap()).yellow());
 }
 
 pub fn show_todo(show_id: String) {
@@ -292,5 +292,5 @@ pub fn delete_todo(delete_id: String) {
     diesel::delete(todos.filter(id.eq(decoded_id)))
         .execute(connection)
         .expect("Error loading posts");
-    println!("{} deleted", delete_id);
+    println!("{} deleted", delete_id.yellow());
 }
