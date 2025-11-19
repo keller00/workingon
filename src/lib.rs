@@ -200,7 +200,7 @@ pub fn complete_todo(show_id: String) {
         .set(completed.eq(Utc::now()))
         .execute(connection)
         .expect("TODO couldn't be completed");
-    println!("{} completed, if this was a mistake reopen with `{} reopen {}`", show_id, BIN, show_id)
+    println!("{} completed, if this was a mistake reopen with `{} reopen {}`", show_id.yellow(), BIN, show_id)
 }
 
 pub fn reopen_todo(show_id: String) {
@@ -212,7 +212,7 @@ pub fn reopen_todo(show_id: String) {
         .set(completed.eq(None::<DateTime<Utc>>))
         .execute(connection)
         .expect("TODO couldn't be reopened");
-    println!("{} reopened, if this was a mistake complete with `{} complete {}`", show_id, BIN, show_id)
+    println!("{} reopened, if this was a mistake complete with `{} complete {}`", show_id.yellow(), BIN, show_id)
 }
 
 pub fn edit_todo(show_id: String) {
@@ -241,7 +241,7 @@ pub fn edit_todo(show_id: String) {
         .set((title.eq(t), notes.eq(n)))
         .execute(connection)
         .expect("Was unable to update TODO");
-    println!("{} updated", show_id)
+    println!("{} updated", show_id.yellow())
 }
 
 pub fn list_todos(show_completed: Option<bool>) {
