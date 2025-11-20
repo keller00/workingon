@@ -3,7 +3,7 @@ pub mod constants;
 pub mod models;
 pub mod schema;
 
-use chrono::Utc;
+use chrono::*;
 use colored::Colorize;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -184,7 +184,16 @@ pub fn show_todo(show_id: String) {
         "TODO to show couldn't be found {}",
         found_todos.len()
     );
-    let completed_str = found_todos[0].completed.map(|c| c.to_string()).unwrap_or("not yet".to_string());
+    let completed_str: String = match found_todos[0].completed {
+        Some(ts) => {
+            let local_tz = ts.with_timezone(&Local);
+            format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
+        }
+        None => {
+            "not yet".to_string()
+        }
+
+    };
     println!("{}\n{}\nIt was completed on: {}",
         found_todos[0].title,
         found_todos[0].notes,

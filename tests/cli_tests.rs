@@ -182,8 +182,25 @@ fn test_add_and_show_todo() {
         .success()
         .stdout(predicate::str::contains("First TODO"));
 
-    // Show the TODO using the library
-    workingon::show_todo(todo_id);
+    // Complete the TODO via CLI
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["complete", &todo_id])
+        .assert()
+        .success();
+
+    // Show the TODO via CLI and ensure UTC is not displayed
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["show", &todo_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("First TODO"))
+        .stdout(predicate::str::contains("UTC").not());
 }
 
 #[test]
