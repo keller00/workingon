@@ -42,6 +42,22 @@ pub fn decode_id(s: &str) -> i32 {
         .unwrap()
 }
 
+fn format_datetime(ts: DateTime<Utc>) -> String {
+    let local_tz = ts.with_timezone(&Local);
+    format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
+}
+
+fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String) -> String {
+    match ts {
+        Some(ts) => {
+            format_datetime(ts)
+        }
+        None => {
+            else_item
+        }
+    }
+}
+
 // Path-related functions
 pub fn get_project_data_folder() -> std::path::PathBuf {
     let env_var_name = format!("{}_data_dir", BIN).to_uppercase();
@@ -184,16 +200,7 @@ pub fn show_todo(show_id: String) {
         "TODO to show couldn't be found {}",
         found_todos.len()
     );
-    let completed_str: String = match found_todos[0].completed {
-        Some(ts) => {
-            let local_tz = ts.with_timezone(&Local);
-            format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
-        }
-        None => {
-            "not yet".to_string()
-        }
-
-    };
+    let completed_str: String = format_datetime_or_else(found_todos[0].completed, "not yet".to_string());
     println!("{}\n{}\nIt was completed on: {}",
         found_todos[0].title,
         found_todos[0].notes,
