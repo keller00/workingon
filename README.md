@@ -15,8 +15,9 @@ TODOs are stored locally in SQLite and database migrations run automatically on 
 ```shell
 $ workingon add "Finish writing a better README for workingon"
 TODO added successfully
-$ workingon list                                                
-9yszt Finish writing a better README for workingon
+$ workingon list
+ id     created      title
+ bl5kg  an hour ago  Finish writing a better README for workingon
 xuzrv Order batteries
 $ workingon complete 9yszt
 TODO was completed
