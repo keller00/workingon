@@ -300,7 +300,7 @@ pub fn list_todos(show_completed: Option<bool>) {
     } else {
         let mut table = comfy_table::Table::new();
         table.load_preset(comfy_table::presets::NOTHING);
-        table.set_header(vec!["id", "title"]);
+        table.set_header(vec!["id", "created", "title"]);
         for post in results {
             table.add_row(vec![
                 comfy_table::Cell::new(
@@ -309,10 +309,13 @@ pub fn list_todos(show_completed: Option<bool>) {
                     // could later switch to using comfy_table's built-in coloring.
                     encode_id(post.id.try_into().expect("Failed to cast post id in list")).yellow().to_string(),
                 ),
+                comfy_table::Cell::new(
+                    format_datetime(post.created, false),
+                ),
                 comfy_table::Cell::new(post.title),
             ]);
         }
-        table.column_mut(1).unwrap().set_constraint(
+        table.column_mut(2).unwrap().set_constraint(
             comfy_table::ColumnConstraint::UpperBoundary(comfy_table::Width::Percentage(60))
         );
         println!("{table}")
