@@ -298,13 +298,27 @@ pub fn list_todos(show_completed: Option<bool>) {
     if results.is_empty() {
         println!("There's nothing to do currently :) Add a new one with `{} add`", BIN);
     } else {
+        let mut table = comfy_table::Table::new();
+        table.load_preset(comfy_table::presets::NOTHING);
+        table.set_header(vec!["id", "created", "title"]);
         for post in results {
-            println!(
-                "{} {}",
-                encode_id(post.id.try_into().unwrap()).yellow(),
-                post.title
-            );
+            table.add_row(vec![
+                comfy_table::Cell::new(
+                    // With custom_styling comfy_table flag we can keep using colorize colors, but
+                    // slow down comfy table by 30-50%. I think this is acceptable for now, but
+                    // could later switch to using comfy_table's built-in coloring.
+                    encode_id(post.id.try_into().expect("Failed to cast post id in list")).yellow().to_string(),
+                ),
+                comfy_table::Cell::new(
+                    format_datetime(post.created, false),
+                ),
+                comfy_table::Cell::new(post.title),
+            ]);
         }
+        table.column_mut(2).unwrap().set_constraint(
+            comfy_table::ColumnConstraint::UpperBoundary(comfy_table::Width::Percentage(60))
+        );
+        println!("{table}")
     }
 }
 
