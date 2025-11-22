@@ -12,6 +12,7 @@ readme = "README.md"
 
 [dependencies]
 chrono = "0.4.38"
+chrono-humanize = "0.2.3"
 clap = { version = "4.4.2", features = ["derive", "string"] }
 colored = "2.2.0"
 diesel = { version = "2.2.1", features = [

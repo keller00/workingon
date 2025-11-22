@@ -42,15 +42,20 @@ pub fn decode_id(s: &str) -> i32 {
         .unwrap()
 }
 
-fn format_datetime(ts: DateTime<Utc>) -> String {
+fn format_datetime(ts: DateTime<Utc>, precise: bool) -> String {
     let local_tz = ts.with_timezone(&Local);
+    if !precise {
+        let ht = chrono_humanize::HumanTime::from(ts);
+        return format!("{}", ht);
+
+    }
     format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
 }
 
-fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String) -> String {
+fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String, precise: bool) -> String {
     match ts {
         Some(ts) => {
-            format_datetime(ts)
+            format_datetime(ts, precise)
         }
         None => {
             else_item
@@ -200,10 +205,12 @@ pub fn show_todo(show_id: String) {
         "TODO to show couldn't be found {}",
         found_todos.len()
     );
-    let completed_str: String = format_datetime_or_else(found_todos[0].completed, "not yet".to_string());
-    println!("{}\n{}\nIt was completed on: {}",
+    let created_str: String = format_datetime(found_todos[0].created, false);
+    let completed_str: String = format_datetime_or_else(found_todos[0].completed, "not yet".to_string(), false);
+    println!("{}\n{}\nIt was created: {}\nIt was completed: {}",
         found_todos[0].title,
         found_todos[0].notes,
+        created_str,
         completed_str,
     );
 }
