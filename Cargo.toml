@@ -15,6 +15,7 @@ chrono = "0.4.38"
 chrono-humanize = "0.2.3"
 clap = { version = "4.4.2", features = ["derive", "string"] }
 colored = "2.2.0"
+comfy-table = { version = "7.2.1", features = ["custom_styling", "tty"] }
 diesel = { version = "2.2.1", features = [
   "chrono",
   "sqlite",
