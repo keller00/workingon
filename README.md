@@ -14,13 +14,13 @@ TODOs are stored locally in SQLite and database migrations run automatically on 
 
 ```shell
 $ workingon add "Finish writing a better README for workingon"
-TODO added successfully
+bl5kg created
 $ workingon list
  id     created      title
- bl5kg  an hour ago  Finish writing a better README for workingon
-xuzrv Order batteries
-$ workingon complete 9yszt
-TODO was completed
+ bl5kg  2 days ago   Finish writing a better README for workingon
+ 5d6ay  5 days ago   Order batteries
+$ workingon complete bl5kg
+bl5kg completed, if this was a mistake reopen with `workingon reopen bl5kg`
 ```
 
 ## Usage (quick reference)
