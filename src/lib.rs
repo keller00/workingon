@@ -42,16 +42,6 @@ pub fn decode_id(s: &str) -> i32 {
         .unwrap()
 }
 
-fn format_datetime(ts: DateTime<Utc>, precise: bool) -> String {
-    let local_tz = ts.with_timezone(&Local);
-    if !precise {
-        let ht = chrono_humanize::HumanTime::from(ts);
-        return format!("{}", ht);
-
-    }
-    format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
-}
-
 // Path-related functions
 pub fn get_project_data_folder() -> std::path::PathBuf {
     let env_var_name = format!("{}_data_dir", BIN).to_uppercase();
@@ -182,12 +172,13 @@ pub fn get_todos() -> Vec<Todos> {
         .expect("Was unable to get all TODOs")
 }
 
-pub fn complete_todo(show_id: &String) {
+pub fn complete_todo(show_id: &String, ts: Option<DateTime<Utc>>) {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
     let decoded_id = decode_id(show_id);
+    let completion_ts = ts.unwrap_or_else(|| Utc::now());
     diesel::update(todos.find(decoded_id))
-        .set(completed.eq(Utc::now()))
+        .set(completed.eq(completion_ts))
         .execute(connection)
         .unwrap_or_else(|_| panic!("TODO: {} couldn't be completed", show_id));
 }
