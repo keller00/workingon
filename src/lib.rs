@@ -42,16 +42,6 @@ pub fn decode_id(s: &str) -> i32 {
         .unwrap()
 }
 
-fn format_datetime(ts: DateTime<Utc>, precise: bool) -> String {
-    let local_tz = ts.with_timezone(&Local);
-    if !precise {
-        let ht = chrono_humanize::HumanTime::from(ts);
-        return format!("{}", ht);
-
-    }
-    format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
-}
-
 // Path-related functions
 pub fn get_project_data_folder() -> std::path::PathBuf {
     let env_var_name = format!("{}_data_dir", BIN).to_uppercase();
