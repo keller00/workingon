@@ -52,17 +52,6 @@ fn format_datetime(ts: DateTime<Utc>, precise: bool) -> String {
     format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
 }
 
-fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String, precise: bool) -> String {
-    match ts {
-        Some(ts) => {
-            format_datetime(ts, precise)
-        }
-        None => {
-            else_item
-        }
-    }
-}
-
 // Path-related functions
 pub fn get_project_data_folder() -> std::path::PathBuf {
     let env_var_name = format!("{}_data_dir", BIN).to_uppercase();
@@ -166,71 +155,68 @@ pub fn create_temp_todo_file_open_and_then_read_remove_process(
 }
 
 // High-level database operations
-pub fn add_todo(title: Option<String>) {
-    // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
-    //  don't forget multiline messages with multiple -m's
-    let title_str = match title {
-        Some(t) => t,
-        None => "<title>".to_string(),
-    };
-    let p_buff = get_todoeditmsg_file();
-    let fp = p_buff.as_path();
-    let (title, notes) =
-        create_temp_todo_file_open_and_then_read_remove_process(fp, title_str, String::new());
+pub fn add_todo(todo: &NewTodo) -> Todos {
     let connection = &mut establish_connection();
-    let new_todo = NewTodo {
-        title: title.as_str(),
-        notes: notes.as_str(),
-        created: Utc::now(),
-    };
-    let created_todo = diesel::insert_into(todos::table)
-        .values(&new_todo)
+    diesel::insert_into(todos::table)
+        .values(todo)
         .returning(Todos::as_returning())
         .get_result(connection)
-        .expect("Error saving new TODO");
-    println!("{} created", encode_id(created_todo.id.try_into().unwrap()).yellow());
+        .expect("Error saving new TODO")
 }
 
-pub fn show_todo(show_id: String) {
+pub fn get_todo(get_id: &String) -> Todos {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
-    let decoded_id = decode_id(&show_id);
-    let found_todos = todos
-        .select(Todos::as_select())
+    let decoded_id = decode_id(get_id);
+    todos.select(Todos::as_select())
         .filter(id.eq(decoded_id))
-        .load(connection)
-        .expect("TODOs couldn't be retrieved");
-    assert!(
-        found_todos.len() == 1,
-        "TODO to show couldn't be found {}",
-        found_todos.len()
-    );
-    let created_str: String = format_datetime(found_todos[0].created, false);
-    let completed_str: String = format_datetime_or_else(found_todos[0].completed, "not yet".to_string(), false);
-    println!("{}\n{}\nIt was created: {}\nIt was completed: {}",
-        found_todos[0].title,
-        found_todos[0].notes,
-        created_str,
-        completed_str,
-    );
+        .first(connection)
+        .unwrap_or_else(|_| panic!("Single TODO couldn't be found with id {}", get_id))
 }
 
-pub fn complete_todo(show_id: String) {
+pub fn get_todos() -> Vec<Todos> {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
-    let decoded_id = decode_id(&show_id);
+    todos.select(Todos::as_select())
+        .load(connection)
+        .expect("Was unable to get all TODOs")
+}
+
+pub fn complete_todo(show_id: &String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(show_id);
     diesel::update(todos.find(decoded_id))
         .set(completed.eq(Utc::now()))
         .execute(connection)
-        .expect("TODO couldn't be completed");
-    println!("{} completed, if this was a mistake reopen with `{} reopen {}`", show_id.yellow(), BIN, show_id)
+        .unwrap_or_else(|_| panic!("TODO: {} couldn't be completed", show_id));
 }
 
-pub fn reopen_todo(show_id: String) {
+pub fn set_todo_title(update_id: &String, new_title: &String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(update_id);
+    diesel::update(todos.find(decoded_id))
+        .set(title.eq(new_title))
+        .execute(connection)
+        .unwrap_or_else(|_| panic!("title of TODO: {} couldn't be updated", update_id));
+}
+
+pub fn set_todo_notes(update_id: &String, new_notes: &String) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(update_id);
+    diesel::update(todos.find(decoded_id))
+        .set(notes.eq(new_notes))
+        .execute(connection)
+        .unwrap_or_else( |_| panic!("notes of TODO: {} couldn't be updated", update_id));
+}
+
+pub fn reopen_todo(show_id: &String) {
     use self::schema::todos::dsl::*;
     use chrono::DateTime;
     let connection = &mut establish_connection();
-    let decoded_id = decode_id(&show_id);
+    let decoded_id = decode_id(show_id);
     diesel::update(todos.find(decoded_id))
         .set(completed.eq(None::<DateTime<Utc>>))
         .execute(connection)
@@ -238,96 +224,11 @@ pub fn reopen_todo(show_id: String) {
     println!("{} reopened, if this was a mistake complete with `{} complete {}`", show_id.yellow(), BIN, show_id)
 }
 
-pub fn edit_todo(show_id: String) {
+pub fn delete_todo(delete_id: &String) {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
-    let decoded_id = decode_id(&show_id);
-    let found_todos = todos
-        .select(Todos::as_select())
-        .filter(id.eq(decoded_id))
-        .load(connection)
-        .expect("TODOs couldn't be retrieved");
-    assert!(
-        found_todos.len() == 1,
-        "TODO to show couldn't be found {}",
-        found_todos.len()
-    );
-    let p_buff = get_todoeditmsg_file();
-    let fp = p_buff.as_path();
-    let (t, n) = create_temp_todo_file_open_and_then_read_remove_process(
-        fp,
-        found_todos[0].title.clone(),
-        found_todos[0].notes.clone(),
-    );
-    // TODO: do the rest of this
-    diesel::update(&found_todos[0])
-        .set((title.eq(t), notes.eq(n)))
-        .execute(connection)
-        .expect("Was unable to update TODO");
-    println!("{} updated", show_id.yellow())
-}
-
-pub fn list_todos(show_completed: Option<bool>) {
-    use self::schema::todos::dsl::*;
-    use diesel::sqlite::Sqlite;
-    let connection = &mut establish_connection();
-    let mut query = todos.select(Todos::as_select()).into_boxed::<Sqlite>();
-    
-    // show_completed parameter:
-    // - None: show open (uncompleted) TODOs (default behavior)
-    // - Some(true): show only completed TODOs
-    // - Some(false): show all TODOs (both completed and open)
-    match show_completed {
-        Some(true) => {
-            // Show only completed TODOs
-            query = query.filter(completed.is_not_null());
-        }
-        Some(false) => {
-            // Show all TODOs (no filter)
-        }
-        None => {
-            // Default: show only open (uncompleted) TODOs
-            query = query.filter(completed.is_null());
-        }
-    }
-    
-    let results = query
-        .order_by(id.desc())
-        .load(connection)
-        .expect("Error loading posts");
-    if results.is_empty() {
-        println!("There's nothing to do currently :) Add a new one with `{} add`", BIN);
-    } else {
-        let mut table = comfy_table::Table::new();
-        table.load_preset(comfy_table::presets::NOTHING);
-        table.set_header(vec!["id", "created", "title"]);
-        for post in results {
-            table.add_row(vec![
-                comfy_table::Cell::new(
-                    // With custom_styling comfy_table flag we can keep using colorize colors, but
-                    // slow down comfy table by 30-50%. I think this is acceptable for now, but
-                    // could later switch to using comfy_table's built-in coloring.
-                    encode_id(post.id.try_into().expect("Failed to cast post id in list")).yellow().to_string(),
-                ),
-                comfy_table::Cell::new(
-                    format_datetime(post.created, false),
-                ),
-                comfy_table::Cell::new(post.title),
-            ]);
-        }
-        table.column_mut(2).unwrap().set_constraint(
-            comfy_table::ColumnConstraint::UpperBoundary(comfy_table::Width::Percentage(60))
-        );
-        println!("{table}")
-    }
-}
-
-pub fn delete_todo(delete_id: String) {
-    use self::schema::todos::dsl::*;
-    let connection = &mut establish_connection();
-    let decoded_id = decode_id(&delete_id);
+    let decoded_id = decode_id(delete_id);
     diesel::delete(todos.filter(id.eq(decoded_id)))
         .execute(connection)
         .expect("Error loading posts");
-    println!("{} deleted", delete_id.yellow());
 }

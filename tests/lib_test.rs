@@ -2,7 +2,8 @@ use diesel::prelude::*;
 use serial_test::serial;
 use std::env;
 use tempdir::TempDir;
-use workingon::*;
+use workingon::{models::NewTodo, *};
+use chrono::Utc;
 
 // Helper function to set up a test environment
 fn setup_test_env() -> TempDir {
@@ -176,7 +177,7 @@ fn test_add_todo_with_title() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
-    add_todo(Some("Test TODO".to_string()));
+    add_todo(&NewTodo{title: "Test TODO", notes:"", created:Utc::now()});
 
     // Verify the TODO was added by checking the database
     let connection = &mut establish_connection();
@@ -199,7 +200,7 @@ fn test_add_todo_without_title() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
-    add_todo(None);
+    add_todo(&NewTodo{title: "<title>", notes:"", created:Utc::now()});
 
     // Verify the TODO was added with default title
     let connection = &mut establish_connection();
@@ -223,7 +224,7 @@ fn test_show_todo() {
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
     // Add a TODO first
-    add_todo(Some("Show Test TODO".to_string()));
+    add_todo(&NewTodo{title: "Show Test TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID
     let connection = &mut establish_connection();
@@ -237,24 +238,7 @@ fn test_show_todo() {
     let todo_id = encode_id(results[0].id.try_into().unwrap());
 
     // Show the TODO
-    show_todo(todo_id);
-
-    cleanup_test_env();
-}
-
-#[test]
-#[serial]
-fn test_list_todos() {
-    let _tmp_dir = setup_test_env();
-    env::set_var("EDITOR", "-"); // Ensure editor is set to dash
-
-    // Add multiple TODOs
-    add_todo(Some("First TODO".to_string()));
-    add_todo(Some("Second TODO".to_string()));
-    add_todo(Some("Third TODO".to_string()));
-
-    // List TODOs
-    list_todos(None);
+    get_todo(&todo_id);
 
     cleanup_test_env();
 }
@@ -266,7 +250,7 @@ fn test_list_todos_flags() {
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
     // Add an open TODO
-    add_todo(Some("Open TODO".to_string()));
+    add_todo(&NewTodo{title: "Open TODO", notes:"", created:Utc::now()});
     let connection = &mut establish_connection();
     use workingon::schema::todos::dsl::*;
     let open_results = todos
@@ -277,14 +261,14 @@ fn test_list_todos_flags() {
     let open_todo_id = open_results[0].id;
 
     // Add a completed TODO
-    add_todo(Some("Completed TODO".to_string()));
+    add_todo(&NewTodo{title: "Completed TODO", notes:"", created:Utc::now()});
     let completed_results = todos
         .select(workingon::models::Todos::as_select())
         .filter(title.eq("Completed TODO"))
         .load(connection)
         .expect("Error loading todos");
     let completed_todo_id = completed_results[0].id;
-    complete_todo(encode_id(completed_todo_id.try_into().unwrap()));
+    complete_todo(&encode_id(completed_todo_id.try_into().unwrap()));
 
     // Test 1: None (default) should show only open TODOs
     let connection = &mut establish_connection();
@@ -326,7 +310,7 @@ fn test_delete_todo() {
     let _tmp_dir = setup_test_env();
 
     // Add a TODO first
-    add_todo(Some("Delete Test TODO".to_string()));
+    add_todo(&NewTodo{title: "Delete Test TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID
     let connection = &mut establish_connection();
@@ -340,7 +324,7 @@ fn test_delete_todo() {
     let todo_id = encode_id(results[0].id.try_into().unwrap());
 
     // Delete the TODO
-    delete_todo(todo_id);
+    delete_todo(&todo_id);
 
     // Verify it was deleted
     let remaining = todos
@@ -355,37 +339,12 @@ fn test_delete_todo() {
 
 #[test]
 #[serial]
-fn test_edit_todo() {
-    let _tmp_dir = setup_test_env();
-
-    // Add a TODO first
-    add_todo(Some("Edit Test TODO".to_string()));
-
-    // Get the TODO ID
-    let connection = &mut establish_connection();
-    use workingon::schema::todos::dsl::*;
-    let results = todos
-        .select(workingon::models::Todos::as_select())
-        .filter(title.eq("Edit Test TODO"))
-        .load(connection)
-        .expect("Error loading todos");
-
-    let todo_id = encode_id(results[0].id.try_into().unwrap());
-
-    // Edit the TODO
-    edit_todo(todo_id);
-
-    cleanup_test_env();
-}
-
-#[test]
-#[serial]
 fn test_complete_todo() {
     let _tmp_dir = setup_test_env();
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
     // Add a TODO first
-    add_todo(Some("Complete Test TODO".to_string()));
+    add_todo(&NewTodo{title: "Complete Test TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID
     let connection = &mut establish_connection();
@@ -402,7 +361,7 @@ fn test_complete_todo() {
     assert!(results[0].completed.is_none());
 
     // Complete the TODO
-    complete_todo(todo_id.clone());
+    complete_todo(&todo_id);
 
     // Verify it's now completed
     let completed_results = todos
@@ -424,7 +383,7 @@ fn test_reopen_todo() {
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
     // Add a TODO first
-    add_todo(Some("Reopen Test TODO".to_string()));
+    add_todo(&NewTodo{title: "Reopen Test TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID
     let connection = &mut establish_connection();
@@ -438,7 +397,7 @@ fn test_reopen_todo() {
     let todo_id = encode_id(results[0].id.try_into().unwrap());
 
     // Complete the TODO first
-    complete_todo(todo_id.clone());
+    complete_todo(&todo_id);
 
     // Verify it's completed
     let completed_results = todos
@@ -451,7 +410,7 @@ fn test_reopen_todo() {
     assert!(completed_results[0].completed.is_some());
 
     // Reopen the TODO
-    reopen_todo(todo_id);
+    reopen_todo(&todo_id);
 
     // Verify it's now reopened (completed is None)
     let reopened_results = todos
@@ -473,7 +432,7 @@ fn test_reopen_todo_already_uncompleted() {
     env::set_var("EDITOR", "-"); // Ensure editor is set to dash
 
     // Add a TODO first
-    add_todo(Some("Reopen Uncompleted Test TODO".to_string()));
+    add_todo(&NewTodo{title: "Reopen Uncompleted Test TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID
     let connection = &mut establish_connection();
@@ -490,7 +449,7 @@ fn test_reopen_todo_already_uncompleted() {
     assert!(results[0].completed.is_none());
 
     // Reopen the TODO (even though it's not completed)
-    reopen_todo(todo_id);
+    reopen_todo(&todo_id);
 
     // Verify it's still uncompleted (completed is None)
     let reopened_results = todos

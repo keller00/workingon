@@ -4,8 +4,10 @@ use predicates::prelude::*;
 use rstest::rstest;
 use serial_test::serial;
 use tempdir::TempDir;
+use workingon::models::NewTodo;
 use workingon::schema::todos::dsl::*;
 use workingon::{encode_id, establish_connection};
+use chrono::Utc;
 
 // Helper function to get the latest TODO from the database
 fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
@@ -165,7 +167,7 @@ fn test_add_and_show_todo() {
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    workingon::add_todo(Some("First TODO".to_string()));
+    workingon::add_todo(&NewTodo{title: "First TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID directly from the database
     let (todo_id, _todo) = get_latest_todo().expect("No todo found");
@@ -213,7 +215,7 @@ fn test_complete_and_reopen_todo() {
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    workingon::add_todo(Some("Complete and Reopen Test TODO".to_string()));
+    workingon::add_todo(&NewTodo{title: "Complete and Reopen Test TODO", notes:"", created:Utc::now()});
 
     // Get the TODO ID directly from the database
     let (todo_id, todo) = get_latest_todo().expect("No todo found");
@@ -273,12 +275,12 @@ fn test_list_flags_precedence() {
     std::env::set_var("EDITOR", "-");
 
     // Add an open TODO
-    workingon::add_todo(Some("Open TODO".to_string()));
+    workingon::add_todo(&NewTodo{title: "Open TODO", notes:"", created:Utc::now()});
 
     // Add a completed TODO
-    workingon::add_todo(Some("Completed TODO".to_string()));
+    workingon::add_todo(&NewTodo{title: "Completed TODO", notes:"", created:Utc::now()});
     let (completed_todo_id, _) = get_latest_todo().expect("No todo found");
-    workingon::complete_todo(completed_todo_id);
+    workingon::complete_todo(&completed_todo_id);
 
     // Test 1: Default (no flags) should show only open TODOs
     Command::cargo_bin("workingon")
