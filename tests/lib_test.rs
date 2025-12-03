@@ -268,7 +268,7 @@ fn test_list_todos_flags() {
         .load(connection)
         .expect("Error loading todos");
     let completed_todo_id = completed_results[0].id;
-    complete_todo(&encode_id(completed_todo_id.try_into().unwrap()));
+    complete_todo(&encode_id(completed_todo_id.try_into().unwrap()), None);
 
     // Test 1: None (default) should show only open TODOs
     let connection = &mut establish_connection();
@@ -361,7 +361,7 @@ fn test_complete_todo() {
     assert!(results[0].completed.is_none());
 
     // Complete the TODO
-    complete_todo(&todo_id);
+    complete_todo(&todo_id, None);
 
     // Verify it's now completed
     let completed_results = todos
@@ -397,7 +397,7 @@ fn test_reopen_todo() {
     let todo_id = encode_id(results[0].id.try_into().unwrap());
 
     // Complete the TODO first
-    complete_todo(&todo_id);
+    complete_todo(&todo_id, None);
 
     // Verify it's completed
     let completed_results = todos
@@ -478,4 +478,20 @@ fn test_constants() {
     );
     assert!(!workingon::constants::BIN.is_empty());
     assert!(!workingon::constants::DEFAULT_EDITOR.is_empty());
+}
+
+#[test]
+#[serial]
+fn test_add_and_complete() {
+    let _tmp_dir = setup_test_env();
+    env::set_var("EDITOR", "-"); // Ensure editor is set to dash
+
+    let created_todo = add_todo(&NewTodo{title: "Closed TODO", notes:"", created:Utc::now()});
+    let id_string = encode_id(created_todo.id.try_into().unwrap());
+    complete_todo(
+        &id_string,
+        Some(created_todo.created),
+    );
+    let updated_todo = get_todo(&id_string);
+    assert!(updated_todo.created == updated_todo.completed.unwrap())
 }

@@ -182,12 +182,13 @@ pub fn get_todos() -> Vec<Todos> {
         .expect("Was unable to get all TODOs")
 }
 
-pub fn complete_todo(show_id: &String) {
+pub fn complete_todo(show_id: &String, ts: Option<DateTime<Utc>>) {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
     let decoded_id = decode_id(show_id);
+    let completion_ts = ts.unwrap_or_else(|| Utc::now());
     diesel::update(todos.find(decoded_id))
-        .set(completed.eq(Utc::now()))
+        .set(completed.eq(completion_ts))
         .execute(connection)
         .unwrap_or_else(|_| panic!("TODO: {} couldn't be completed", show_id));
 }

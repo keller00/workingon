@@ -39,6 +39,9 @@ enum Commands {
         /// title of the new TODO
         #[clap()]
         title: Option<String>,
+        /// close the TODO right after creation
+        #[clap(short, long, action)]
+        complete: bool,
     },
     /// List current TODOs, flag priority: all > completed > open (default).
     #[clap(visible_alias = "ls")]
@@ -100,8 +103,8 @@ pub fn run_cli() {
         Commands::LocateDb => {
             println!("{}", crate::get_db_file().display());
         }
-        Commands::Add { title } => {
-            add_todo(title);
+        Commands::Add { title, complete } => {
+            add_todo(title, complete);
         }
         Commands::List { all, completed, open: _ } => {
             // Priority: --all > --completed > default (--open)
@@ -182,7 +185,7 @@ pub fn edit_todo(id: String) {
 }
 
 fn complete_todo(id: &String) {
-    crate::complete_todo(id);
+    crate::complete_todo(id, None);
     println!("{} completed, if this was a mistake reopen with `{} reopen {}`", id.yellow(), BIN, id)
 }
 
@@ -196,7 +199,7 @@ pub fn delete_todo(id: &String) {
     println!("{} deleted", id.yellow());
 }
 
-pub fn add_todo(title: Option<String>) {
+pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
     // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
     //  don't forget multiline messages with multiple -m's
     let title_str = match title {
@@ -213,7 +216,20 @@ pub fn add_todo(title: Option<String>) {
         created: Utc::now(),
     };
     let created_todo = crate::add_todo(&new_todo);
-    println!("{} created", crate::encode_id(created_todo.id.try_into().unwrap()).yellow());
+    if complete_after_creation {
+        crate::complete_todo(
+            &crate::encode_id(created_todo.id.try_into().unwrap()),
+            Some(created_todo.created),
+        );
+
+    }
+    println!(
+        "{} created{}",
+        crate::encode_id(created_todo.id.try_into().unwrap()).yellow(),
+        if complete_after_creation {
+            " and was subsequently completed"
+        } else {""}
+    );
 }
 
 pub fn list_todos(show_completed: Option<bool>) {

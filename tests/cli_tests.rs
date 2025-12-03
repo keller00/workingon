@@ -280,7 +280,7 @@ fn test_list_flags_precedence() {
     // Add a completed TODO
     workingon::add_todo(&NewTodo{title: "Completed TODO", notes:"", created:Utc::now()});
     let (completed_todo_id, _) = get_latest_todo().expect("No todo found");
-    workingon::complete_todo(&completed_todo_id);
+    workingon::complete_todo(&completed_todo_id, None);
 
     // Test 1: Default (no flags) should show only open TODOs
     Command::cargo_bin("workingon")
@@ -346,5 +346,42 @@ fn test_list_flags_precedence() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Completed TODO"));
+}
+
+#[test]
+#[serial]
+fn test_add_and_complete() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+
+    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var("EDITOR", "-");
+
+    // Test 1: Default (no flags) should show only open TODOs
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["add", "--complete", "Completed TODO"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("created and was subsequently completed"));
+
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--open"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Completed TODO").not());
+
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args(["list", "--completed"])
+        .assert()
+        .success()
         .stdout(predicate::str::contains("Completed TODO"));
 }
