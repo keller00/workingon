@@ -1,0 +1,20 @@
+hook hooky {
+    command hooky lint {
+        fix_args --fix
+        pass_files file
+    }
+    files *
+}
+
+lint_rules {
+    - check_broken_symlinks
+    - check_case_conflict
+    - check_merge_conflict
+    - end_of_file_fixer
+    - no_commit_to_branch {
+        branches {
+            - main
+        }
+    }
+    - trailing_whitespace
+}
