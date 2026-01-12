@@ -234,7 +234,7 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
 
 pub fn list_todos(show_completed: Option<bool>) {
     let mut results = crate::get_todos();
-    
+
     // show_completed parameter:
     // - None: show open (uncompleted) TODOs (default behavior)
     // - Some(true): show only completed TODOs
@@ -252,10 +252,10 @@ pub fn list_todos(show_completed: Option<bool>) {
             results.retain(|todo| todo.completed.is_none());
         }
     }
-    
+
     // Sort by id descending (same as the original database query)
     results.sort_by(|a, b| b.id.cmp(&a.id));
-    
+
     if results.is_empty() {
         println!("There's nothing to do currently :) Add a new one with `{} add`", BIN);
     } else {
