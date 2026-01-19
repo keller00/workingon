@@ -12,6 +12,7 @@ pub struct Todos {
     // TODO: time tracking
     pub created: DateTime<Utc>,
     pub completed: Option<DateTime<Utc>>,
+    pub due: Option<DateTime<Utc>>,
 }
 
 #[derive(Insertable)]

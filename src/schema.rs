@@ -5,5 +5,6 @@ diesel::table! {
         notes -> Text,
         created -> diesel::sql_types::TimestamptzSqlite,
         completed -> diesel::sql_types::Nullable<diesel::sql_types::TimestamptzSqlite>,
+        due -> diesel::sql_types::Nullable<diesel::sql_types::TimestamptzSqlite>,
     }
 }
