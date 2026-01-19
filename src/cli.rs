@@ -142,10 +142,10 @@ pub fn run_cli() {
             edit_todo(id.to_string());
         }
         Commands::Complete { id } => {
-            complete_todo(&id.to_string());
+            complete_todo(&id);
         }
         Commands::Reopen { id } => {
-            reopen_todo(&id.to_string());
+            reopen_todo(&id);
         }
         Commands::Due { id, due_text} => {
             set_due_todo(&id, due_text);  // TODO: borrow due_text instead
