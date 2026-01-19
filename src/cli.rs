@@ -246,7 +246,6 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
 
 pub fn list_todos(show_completed: Option<bool>) {
     let mut results = crate::get_todos();
-
     // show_completed parameter:
     // - None: show open (uncompleted) TODOs (default behavior)
     // - Some(true): show only completed TODOs
