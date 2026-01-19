@@ -43,6 +43,9 @@ enum Commands {
         /// close the TODO right after creation
         #[clap(short, long, action)]
         complete: bool,
+        /// due date by which the TODO should be done
+        #[clap(short, long, action)]
+        due: Option<String>,
     },
     /// List current TODOs, flag priority: all > completed > open (default).
     #[clap(visible_alias = "ls")]
@@ -112,8 +115,12 @@ pub fn run_cli() {
         Commands::LocateDb => {
             println!("{}", crate::get_db_file().display());
         }
-        Commands::Add { title, complete } => {
-            add_todo(title, complete);
+        Commands::Add {
+            title,
+            complete,
+            due,
+        } => {
+            add_todo(title, complete, due);
         }
         Commands::List {
             all,
@@ -258,7 +265,7 @@ pub fn delete_todo(id: &String) {
     println!("{} deleted", id.yellow());
 }
 
-pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
+pub fn add_todo(title: Option<String>, complete_after_creation: bool, due: Option<String>) {
     // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
     //  don't forget multiline messages with multiple -m's
     let title_str = match title {
@@ -278,6 +285,13 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
         created: Utc::now(),
     };
     let created_todo = crate::add_todo(&new_todo);
+    if let Some(due_text) = due {
+        let due_ts = crate::parse_due_str(&due_text);
+        crate::set_due(
+            &crate::encode_id(created_todo.id.try_into().unwrap()),
+            Some(due_ts),
+        );
+    }
     if complete_after_creation {
         crate::complete_todo(
             &crate::encode_id(created_todo.id.try_into().unwrap()),
