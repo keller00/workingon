@@ -6,6 +6,14 @@ hook hooky {
     files *
 }
 
+hook cargo_fmt {
+  command cargo fmt {
+    check_args --check
+    pass_files none
+  }
+  files *.rs
+}
+
 lint_rules {
     - check_broken_symlinks
     - check_case_conflict
