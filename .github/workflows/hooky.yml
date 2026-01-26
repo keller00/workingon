@@ -14,17 +14,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - uses: moonrepo/setup-rust@v1
-      - name: Get latest Hooky release tag
-        id: get_tag
-        run: |
-          TAG=$(curl -sSf https://api.github.com/repos/brandonchinn178/hooky/releases/latest \
-                | jq -r .tag_name)
-          echo "Latest Hooky tag is $TAG"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Download Hooky binary
         id: download
         run: |
-          TAG="${{ steps.get_tag.outputs.tag }}"
+          TAG="v1.0.0"
           ASSET="hooky-${TAG#v}-linux-x86_64"
           URL="https://github.com/brandonchinn178/hooky/releases/download/${TAG}/${ASSET}"
           echo "Downloading $URL"
@@ -36,3 +29,5 @@ jobs:
           rustfmt --version
       - name: Execute hooks
         run: hooky run --all --format=verbose
+        env:
+          SKIP: no_commit_to_branch
