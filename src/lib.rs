@@ -32,14 +32,19 @@ fn create_sqids_encoder_with_custom_alphabet() -> Sqids {
 }
 
 pub fn encode_id(i: u64) -> String {
-    create_sqids_encoder_with_custom_alphabet().encode(&vec![i]).expect("Problem encoding id")
+    create_sqids_encoder_with_custom_alphabet()
+        .encode(&vec![i])
+        .expect("Problem encoding id")
 }
 
 pub fn decode_id(s: &str) -> i32 {
     // TODO can I make this nicer?
-    (*create_sqids_encoder_with_custom_alphabet().decode(s).first().expect("Couldn't decode id"))
-        .try_into()
-        .unwrap()
+    (*create_sqids_encoder_with_custom_alphabet()
+        .decode(s)
+        .first()
+        .expect("Couldn't decode id"))
+    .try_into()
+    .unwrap()
 }
 
 // Path-related functions
@@ -158,7 +163,8 @@ pub fn get_todo(get_id: &String) -> Todos {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
     let decoded_id = decode_id(get_id);
-    todos.select(Todos::as_select())
+    todos
+        .select(Todos::as_select())
         .filter(id.eq(decoded_id))
         .first(connection)
         .unwrap_or_else(|_| panic!("Single TODO couldn't be found with id {}", get_id))
@@ -167,7 +173,8 @@ pub fn get_todo(get_id: &String) -> Todos {
 pub fn get_todos() -> Vec<Todos> {
     use self::schema::todos::dsl::*;
     let connection = &mut establish_connection();
-    todos.select(Todos::as_select())
+    todos
+        .select(Todos::as_select())
         .load(connection)
         .expect("Was unable to get all TODOs")
 }
@@ -200,7 +207,7 @@ pub fn set_todo_notes(update_id: &String, new_notes: &String) {
     diesel::update(todos.find(decoded_id))
         .set(notes.eq(new_notes))
         .execute(connection)
-        .unwrap_or_else( |_| panic!("notes of TODO: {} couldn't be updated", update_id));
+        .unwrap_or_else(|_| panic!("notes of TODO: {} couldn't be updated", update_id));
 }
 
 pub fn reopen_todo(show_id: &String) {
@@ -212,7 +219,12 @@ pub fn reopen_todo(show_id: &String) {
         .set(completed.eq(None::<DateTime<Utc>>))
         .execute(connection)
         .expect("TODO couldn't be reopened");
-    println!("{} reopened, if this was a mistake complete with `{} complete {}`", show_id.yellow(), BIN, show_id)
+    println!(
+        "{} reopened, if this was a mistake complete with `{} complete {}`",
+        show_id.yellow(),
+        BIN,
+        show_id
+    )
 }
 
 pub fn delete_todo(delete_id: &String) {

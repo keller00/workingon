@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use chrono::Utc;
 use diesel::prelude::*;
 use predicates::prelude::*;
 use rstest::rstest;
@@ -7,7 +8,6 @@ use tempdir::TempDir;
 use workingon::models::NewTodo;
 use workingon::schema::todos::dsl::*;
 use workingon::{encode_id, establish_connection};
-use chrono::Utc;
 
 // Helper function to get the latest TODO from the database
 fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
@@ -83,7 +83,9 @@ fn test_list_empty() {
         .args(["list"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("There's nothing to do currently :)"));
+        .stdout(predicate::str::contains(
+            "There's nothing to do currently :)",
+        ));
 }
 
 #[test]
@@ -95,7 +97,9 @@ fn test_list_alias_ls() {
         .args(["ls"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("There's nothing to do currently :)"));
+        .stdout(predicate::str::contains(
+            "There's nothing to do currently :)",
+        ));
 }
 
 #[test]
@@ -163,11 +167,18 @@ fn test_add_and_show_todo() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
 
     // Set environment variable for the test
-    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var(
+        "WORKINGON_DATA_DIR",
+        tmp_dir.path().to_string_lossy().to_string(),
+    );
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    workingon::add_todo(&NewTodo{title: "First TODO", notes:"", created:Utc::now()});
+    workingon::add_todo(&NewTodo {
+        title: "First TODO",
+        notes: "",
+        created: Utc::now(),
+    });
 
     // Get the TODO ID directly from the database
     let (todo_id, _todo) = get_latest_todo().expect("No todo found");
@@ -211,11 +222,18 @@ fn test_complete_and_reopen_todo() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
 
     // Set environment variable for the test
-    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var(
+        "WORKINGON_DATA_DIR",
+        tmp_dir.path().to_string_lossy().to_string(),
+    );
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    workingon::add_todo(&NewTodo{title: "Complete and Reopen Test TODO", notes:"", created:Utc::now()});
+    workingon::add_todo(&NewTodo {
+        title: "Complete and Reopen Test TODO",
+        notes: "",
+        created: Utc::now(),
+    });
 
     // Get the TODO ID directly from the database
     let (todo_id, todo) = get_latest_todo().expect("No todo found");
@@ -231,7 +249,9 @@ fn test_complete_and_reopen_todo() {
         .args(["complete", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("completed, if this was a mistake reopen with `"));
+        .stdout(predicate::str::contains(
+            "completed, if this was a mistake reopen with `",
+        ));
 
     // Verify it's completed by checking the database
     let connection = &mut workingon::establish_connection();
@@ -252,7 +272,9 @@ fn test_complete_and_reopen_todo() {
         .args(["reopen", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("reopened, if this was a mistake complete with `"));
+        .stdout(predicate::str::contains(
+            "reopened, if this was a mistake complete with `",
+        ));
 
     // Verify it's reopened by checking the database
     let reopened_results = todos
@@ -271,14 +293,25 @@ fn test_list_flags_precedence() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
 
     // Set environment variable for the test
-    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var(
+        "WORKINGON_DATA_DIR",
+        tmp_dir.path().to_string_lossy().to_string(),
+    );
     std::env::set_var("EDITOR", "-");
 
     // Add an open TODO
-    workingon::add_todo(&NewTodo{title: "Open TODO", notes:"", created:Utc::now()});
+    workingon::add_todo(&NewTodo {
+        title: "Open TODO",
+        notes: "",
+        created: Utc::now(),
+    });
 
     // Add a completed TODO
-    workingon::add_todo(&NewTodo{title: "Completed TODO", notes:"", created:Utc::now()});
+    workingon::add_todo(&NewTodo {
+        title: "Completed TODO",
+        notes: "",
+        created: Utc::now(),
+    });
     let (completed_todo_id, _) = get_latest_todo().expect("No todo found");
     workingon::complete_todo(&completed_todo_id, None);
 
@@ -354,7 +387,10 @@ fn test_list_flags_precedence() {
 fn test_add_and_complete() {
     let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
 
-    std::env::set_var("WORKINGON_DATA_DIR", tmp_dir.path().to_string_lossy().to_string());
+    std::env::set_var(
+        "WORKINGON_DATA_DIR",
+        tmp_dir.path().to_string_lossy().to_string(),
+    );
     std::env::set_var("EDITOR", "-");
 
     // Test 1: Default (no flags) should show only open TODOs
@@ -365,7 +401,9 @@ fn test_add_and_complete() {
         .args(["add", "--complete", "Completed TODO"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("created and was subsequently completed"));
+        .stdout(predicate::str::contains(
+            "created and was subsequently completed",
+        ));
 
     Command::cargo_bin("workingon")
         .unwrap()
