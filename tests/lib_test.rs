@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{TimeDelta, Utc};
 use diesel::prelude::*;
 use serial_test::serial;
 use std::env;
@@ -534,4 +534,24 @@ fn test_add_and_complete() {
     complete_todo(&id_string, Some(created_todo.created));
     let updated_todo = get_todo(&id_string);
     assert!(updated_todo.created == updated_todo.completed.unwrap())
+}
+
+#[test]
+#[serial]
+fn test_set_due() {
+    let _tmp_dir = setup_test_env();
+
+    let created_todo = add_todo(&NewTodo {
+        title: "test_set_due",
+        notes: "",
+        created: Utc::now(),
+    });
+    let id_string = encode_id(created_todo.id.try_into().unwrap());
+    let a_week_later = created_todo.created + TimeDelta::seconds(60 * 60 * 24 * 7);
+    set_due(&id_string, Some(a_week_later));
+    let updated_todo = get_todo(&id_string);
+    assert!(updated_todo.due.unwrap() == a_week_later);
+    set_due(&id_string, None);
+    let updated_todo = get_todo(&id_string);
+    assert!(updated_todo.due.is_none());
 }
