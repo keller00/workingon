@@ -25,7 +25,8 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 fn parse_due_str(s: &String) -> DateTime<Utc> {
     chrono_english::parse_date_string(s, Local::now(), chrono_english::Dialect::Us)
-        .expect("Parsing due date didn't work").to_utc()
+        .expect("Parsing due date didn't work")
+        .to_utc()
 }
 
 fn create_sqids_encoder_with_custom_alphabet() -> Sqids {
@@ -202,12 +203,16 @@ pub fn set_due(show_id: &String, ts: Option<DateTime<Utc>>) {
     diesel::update(todos.find(decoded_id))
         .set(due.eq(ts))
         .execute(connection)
-        .unwrap_or_else(|_| panic!("TODO: {}'s due couldn't be set to {}", show_id,
-            match ts {
-                Some(due_ts) => due_ts.format("%c").to_string(),
-                None => "none".to_string(),
-            }
-        ));
+        .unwrap_or_else(|_| {
+            panic!(
+                "TODO: {}'s due couldn't be set to {}",
+                show_id,
+                match ts {
+                    Some(due_ts) => due_ts.format("%c").to_string(),
+                    None => "none".to_string(),
+                }
+            )
+        });
 }
 
 pub fn set_todo_title(update_id: &String, new_title: &String) {

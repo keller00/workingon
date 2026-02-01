@@ -96,8 +96,8 @@ enum Commands {
         id: String,
         /// A human readable description of a time by which the TODO should be dune, like: "Monday
         /// 9am". If not provided due time will be removed
-        due_text: Option<String>
-    }
+        due_text: Option<String>,
+    },
 }
 
 fn get_version_str() -> String {
@@ -154,8 +154,8 @@ pub fn run_cli() {
         Commands::Reopen { id } => {
             reopen_todo(&id);
         }
-        Commands::Due { id, due_text} => {
-            set_due_todo(&id, due_text);  // TODO: borrow due_text instead
+        Commands::Due { id, due_text } => {
+            set_due_todo(&id, due_text); // TODO: borrow due_text instead
         }
     }
 }
@@ -174,19 +174,26 @@ fn format_duetime(ts: DateTime<Utc>, precise: bool) -> ColoredString {
     let offset = ts - Utc::now();
     if offset.num_seconds() < 0 {
         duetime.red()
-    } else if offset.num_seconds() < 60*60*24 {  // A day
+    } else if offset.num_seconds() < 60 * 60 * 24 {
+        // A day
         // TODO: could this be orange and then next be yellow
         duetime.yellow()
-    } else if offset.num_seconds() < 60*60*24*3 {  // 3 days
+    } else if offset.num_seconds() < 60 * 60 * 24 * 3 {
+        // 3 days
         duetime.magenta()
-    } else if offset.num_seconds() < 60*60*24*7 {  // 3 days
+    } else if offset.num_seconds() < 60 * 60 * 24 * 7 {
+        // 3 days
         duetime.green()
     } else {
         duetime.into()
     }
 }
 
-fn format_duetime_or_else(ts: Option<DateTime<Utc>>, else_item: String, precise: bool) -> ColoredString {
+fn format_duetime_or_else(
+    ts: Option<DateTime<Utc>>,
+    else_item: String,
+    precise: bool,
+) -> ColoredString {
     match ts {
         Some(ts) => format_duetime(ts, precise),
         None => else_item.into(),
@@ -335,8 +342,8 @@ pub fn list_todos(show_completed: Option<bool>) {
     results.sort_by(|a, b| match (&a.due, &b.due) {
         (Some(d1), Some(d2)) => d1.cmp(d2), // both have dates → compare them
         (None, Some(_)) => Ordering::Greater, // a is None, b has a date → a goes after b
-        (Some(_), None) => Ordering::Less,    // a has a date, b is None → a goes before b
-        (None, None) => Ordering::Equal,  // both None → keep relative order (stable sort)
+        (Some(_), None) => Ordering::Less,  // a has a date, b is None → a goes before b
+        (None, None) => Ordering::Equal,    // both None → keep relative order (stable sort)
     });
 
     if results.is_empty() {
