@@ -23,6 +23,12 @@ use self::schema::todos;
 pub const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
+fn parse_due_str(s: &String) -> DateTime<Utc> {
+    chrono_english::parse_date_string(s, Local::now(), chrono_english::Dialect::Us)
+        .expect("Parsing due date didn't work")
+        .to_utc()
+}
+
 fn create_sqids_encoder_with_custom_alphabet() -> Sqids {
     Sqids::builder()
         .min_length(5)
@@ -188,6 +194,25 @@ pub fn complete_todo(show_id: &String, ts: Option<DateTime<Utc>>) {
         .set(completed.eq(completion_ts))
         .execute(connection)
         .unwrap_or_else(|_| panic!("TODO: {} couldn't be completed", show_id));
+}
+
+pub fn set_due(show_id: &String, ts: Option<DateTime<Utc>>) {
+    use self::schema::todos::dsl::*;
+    let connection = &mut establish_connection();
+    let decoded_id = decode_id(show_id);
+    diesel::update(todos.find(decoded_id))
+        .set(due.eq(ts))
+        .execute(connection)
+        .unwrap_or_else(|_| {
+            panic!(
+                "TODO: {}'s due couldn't be set to {}",
+                show_id,
+                match ts {
+                    Some(due_ts) => due_ts.format("%c").to_string(),
+                    None => "none".to_string(),
+                }
+            )
+        });
 }
 
 pub fn set_todo_title(update_id: &String, new_title: &String) {

@@ -3,7 +3,8 @@ use crate::models::NewTodo;
 
 use chrono::{DateTime, Local, Utc};
 use clap::{Parser, Subcommand};
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
+use std::cmp::Ordering;
 
 #[derive(Parser)]
 #[command(
@@ -42,6 +43,9 @@ enum Commands {
         /// close the TODO right after creation
         #[clap(short, long, action)]
         complete: bool,
+        /// due date by which the TODO should be done
+        #[clap(short, long, action)]
+        due: Option<String>,
     },
     /// List current TODOs, flag priority: all > completed > open (default).
     #[clap(visible_alias = "ls")]
@@ -86,6 +90,14 @@ enum Commands {
         #[clap()]
         id: String,
     },
+    /// Set the due time
+    Due {
+        #[clap()]
+        id: String,
+        /// A human readable description of a time by which the TODO should be dune, like: "Monday
+        /// 9am". If not provided due time will be removed
+        due_text: Option<String>,
+    },
 }
 
 fn get_version_str() -> String {
@@ -103,8 +115,12 @@ pub fn run_cli() {
         Commands::LocateDb => {
             println!("{}", crate::get_db_file().display());
         }
-        Commands::Add { title, complete } => {
-            add_todo(title, complete);
+        Commands::Add {
+            title,
+            complete,
+            due,
+        } => {
+            add_todo(title, complete, due);
         }
         Commands::List {
             all,
@@ -133,10 +149,13 @@ pub fn run_cli() {
             edit_todo(id.to_string());
         }
         Commands::Complete { id } => {
-            complete_todo(&id.to_string());
+            complete_todo(&id);
         }
         Commands::Reopen { id } => {
-            reopen_todo(&id.to_string());
+            reopen_todo(&id);
+        }
+        Commands::Due { id, due_text } => {
+            set_due_todo(&id, due_text); // TODO: borrow due_text instead
         }
     }
 }
@@ -148,6 +167,37 @@ fn format_datetime(ts: DateTime<Utc>, precise: bool) -> String {
         return format!("{}", ht);
     }
     format!("{}", local_tz.format("%d/%m/%Y %H:%M"))
+}
+
+fn format_duetime(ts: DateTime<Utc>, precise: bool) -> ColoredString {
+    let duetime = format_datetime(ts, precise);
+    let offset = ts - Utc::now();
+    if offset.num_seconds() < 0 {
+        duetime.red()
+    } else if offset.num_seconds() < 60 * 60 * 24 {
+        // A day
+        // TODO: could this be orange and then next be yellow
+        duetime.yellow()
+    } else if offset.num_seconds() < 60 * 60 * 24 * 3 {
+        // 3 days
+        duetime.magenta()
+    } else if offset.num_seconds() < 60 * 60 * 24 * 7 {
+        // 3 days
+        duetime.green()
+    } else {
+        duetime.into()
+    }
+}
+
+fn format_duetime_or_else(
+    ts: Option<DateTime<Utc>>,
+    else_item: String,
+    precise: bool,
+) -> ColoredString {
+    match ts {
+        Some(ts) => format_duetime(ts, precise),
+        None => else_item.into(),
+    }
 }
 
 fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String, precise: bool) -> String {
@@ -162,9 +212,10 @@ fn show_todo(id: &String) {
     let created_str: String = format_datetime(found_todo.created, false);
     let completed_str: String =
         format_datetime_or_else(found_todo.completed, "not yet".to_string(), false);
+    let due_str = format_duetime_or_else(found_todo.due, "no due date".to_string(), false);
     println!(
-        "{}\n{}\nIt was created: {}\nIt was completed: {}",
-        found_todo.title, found_todo.notes, created_str, completed_str,
+        "{}\n{}\nIt was created: {}\nIt was completed: {}\nIt's due on: {}",
+        found_todo.title, found_todo.notes, created_str, completed_str, due_str,
     );
 }
 
@@ -192,6 +243,20 @@ fn complete_todo(id: &String) {
     )
 }
 
+fn set_due_todo(id: &String, due_text: Option<String>) {
+    let mut due_ts: Option<DateTime<Utc>> = None;
+    if let Some(due_str) = due_text {
+        due_ts = Some(crate::parse_due_str(&due_str));
+    }
+    crate::set_due(id, due_ts);
+    println!(
+        // TODO: add undo message
+        "{} is due at: {}",
+        id.yellow(),
+        format_duetime_or_else(due_ts, "no set time".to_string(), false)
+    )
+}
+
 fn reopen_todo(id: &String) {
     crate::reopen_todo(id);
     println!(
@@ -207,7 +272,7 @@ pub fn delete_todo(id: &String) {
     println!("{} deleted", id.yellow());
 }
 
-pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
+pub fn add_todo(title: Option<String>, complete_after_creation: bool, due: Option<String>) {
     // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
     //  don't forget multiline messages with multiple -m's
     let title_str = match title {
@@ -227,6 +292,13 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
         created: Utc::now(),
     };
     let created_todo = crate::add_todo(&new_todo);
+    if let Some(due_text) = due {
+        let due_ts = crate::parse_due_str(&due_text);
+        crate::set_due(
+            &crate::encode_id(created_todo.id.try_into().unwrap()),
+            Some(due_ts),
+        );
+    }
     if complete_after_creation {
         crate::complete_todo(
             &crate::encode_id(created_todo.id.try_into().unwrap()),
@@ -246,7 +318,6 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool) {
 
 pub fn list_todos(show_completed: Option<bool>) {
     let mut results = crate::get_todos();
-
     // show_completed parameter:
     // - None: show open (uncompleted) TODOs (default behavior)
     // - Some(true): show only completed TODOs
@@ -265,8 +336,15 @@ pub fn list_todos(show_completed: Option<bool>) {
         }
     }
 
-    // Sort by id descending (same as the original database query)
-    results.sort_by(|a, b| b.id.cmp(&a.id));
+    // Sort by due time descending, while pushing no due dates to the back
+    // When they are both None, keep relative order to maintain secondary sort from
+    // database query by id.
+    results.sort_by(|a, b| match (&a.due, &b.due) {
+        (Some(d1), Some(d2)) => d1.cmp(d2), // both have dates → compare them
+        (None, Some(_)) => Ordering::Greater, // a is None, b has a date → a goes after b
+        (Some(_), None) => Ordering::Less,  // a has a date, b is None → a goes before b
+        (None, None) => Ordering::Equal,    // both None → keep relative order (stable sort)
+    });
 
     if results.is_empty() {
         println!(
@@ -276,7 +354,7 @@ pub fn list_todos(show_completed: Option<bool>) {
     } else {
         let mut table = comfy_table::Table::new();
         table.load_preset(comfy_table::presets::NOTHING);
-        table.set_header(vec!["id", "created", "title"]);
+        table.set_header(vec!["id", "created", "due", "title"]);
         for post in results {
             table.add_row(vec![
                 comfy_table::Cell::new(
@@ -288,6 +366,7 @@ pub fn list_todos(show_completed: Option<bool>) {
                         .to_string(),
                 ),
                 comfy_table::Cell::new(format_datetime(post.created, false)),
+                comfy_table::Cell::new(format_duetime_or_else(post.due, "".to_string(), false)),
                 comfy_table::Cell::new(post.title),
             ]);
         }

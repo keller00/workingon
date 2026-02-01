@@ -7,7 +7,7 @@ use serial_test::serial;
 use tempdir::TempDir;
 use workingon::models::NewTodo;
 use workingon::schema::todos::dsl::*;
-use workingon::{encode_id, establish_connection};
+use workingon::{encode_id, establish_connection, get_todo};
 
 // Helper function to get the latest TODO from the database
 fn get_latest_todo() -> Option<(String, workingon::models::Todos)> {
@@ -182,8 +182,6 @@ fn test_add_and_show_todo() {
 
     // Get the TODO ID directly from the database
     let (todo_id, _todo) = get_latest_todo().expect("No todo found");
-
-    println!("{}", todo_id);
 
     // Verify the TODO was added by listing
     Command::cargo_bin("workingon")
@@ -422,4 +420,52 @@ fn test_add_and_complete() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Completed TODO"));
+}
+
+#[test]
+#[serial]
+fn test_set_duetime() {
+    let tmp_dir = TempDir::new("workingon_test").expect("cannot make temp directory for test");
+
+    std::env::set_var(
+        "WORKINGON_DATA_DIR",
+        tmp_dir.path().to_string_lossy().to_string(),
+    );
+    std::env::set_var("EDITOR", "-");
+
+    let created_todo = workingon::add_todo(&NewTodo {
+        title: "test_set_duetime",
+        notes: "",
+        created: Utc::now(),
+    });
+    // Set same due date as in help message to make sure the example works
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args([
+            "due",
+            &crate::encode_id(created_todo.id.try_into().unwrap()),
+            "Monday 9am",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("is due at:"));
+    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
+    // Make sure command changed database
+    assert!(updated_todo.due.is_some());
+    // Set no due date
+    Command::cargo_bin("workingon")
+        .unwrap()
+        .env("EDITOR", "-")
+        .env("WORKINGON_DATA_DIR", tmp_dir.path())
+        .args([
+            "due",
+            &crate::encode_id(created_todo.id.try_into().unwrap()),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("is due at: no set time"));
+    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
+    assert!(updated_todo.due.is_none());
 }
