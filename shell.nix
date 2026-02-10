@@ -3,13 +3,20 @@ let
   pkgs = import nixpkgs { config = {}; overlays = []; };
 in
 
-pkgs.mkShellNoCC {
+pkgs.mkShell {
   packages = with pkgs; [
     rustc
     cargo
+    cargo-llvm-cov
+    rustc.llvmPackages.llvm
     rustfmt
     clippy
     rust-analyzer
     sqlite
   ];
+
+  shellHook = ''
+    export LLVM_COV=${pkgs.llvm}/bin/llvm-cov
+    export LLVM_PROFDATA=${pkgs.llvm}/bin/llvm-profdata
+  '';
 }
