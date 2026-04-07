@@ -1,13 +1,14 @@
 let
-  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/41e216c0ca66c83b12ab7a98cc326b5db01db646.tar.gz";
+  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/83e29f2b8791f6dec20804382fcd9a666d744c07.tar.gz";
   pkgs = import nixpkgs { config = {}; overlays = []; };
 in
 
 pkgs.mkShell {
   packages = with pkgs; [
-    rustc
+    hooky
     cargo
     cargo-llvm-cov
+    rustc
     rustc.llvmPackages.llvm
     rustfmt
     clippy
