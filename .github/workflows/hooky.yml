@@ -13,21 +13,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - uses: moonrepo/setup-rust@v1
-      - name: Download Hooky binary
-        id: download
-        run: |
-          TAG="v1.0.0"
-          ASSET="hooky-${TAG#v}-linux-x86_64"
-          URL="https://github.com/brandonchinn178/hooky/releases/download/${TAG}/${ASSET}"
-          echo "Downloading $URL"
-          sudo curl -L -o /usr/bin/hooky "${URL}"
-          sudo chmod +x /usr/bin/hooky
-      - name: Verify dependency versions
-        run: |
-          hooky --version
-          rustfmt --version
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
       - name: Execute hooks
-        run: hooky run --all --format=verbose
+        run: nix-shell --command "hooky run --all --format=verbose"
         env:
           SKIP: no_commit_to_branch
