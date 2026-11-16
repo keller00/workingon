@@ -38,7 +38,10 @@ fn test_version_command(#[case] command: &str) {
         .args([command])
         .assert()
         .success()
-        .stdout(predicate::str::starts_with("workingon version"));
+        .stdout(
+            predicate::str::starts_with("workingon version")
+                .and(predicate::str::contains("workingon version").count(1)),
+        );
 }
 
 #[rstest]
@@ -48,7 +51,10 @@ fn test_locate_db() {
         .args(["locate-db"])
         .assert()
         .success()
-        .stdout(predicate::str::ends_with("todos.sqlite3\n"));
+        .stdout(
+            predicate::str::ends_with("todos.sqlite3\n")
+                .and(predicate::str::contains("todos.sqlite3").count(1)),
+        );
 }
 
 #[rstest]
@@ -58,9 +64,7 @@ fn test_help_command() {
         .args(["--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "CLI to track what you\'re working on",
-        ));
+        .stdout(predicate::str::contains("CLI to track what you\'re working on").count(1));
 }
 
 #[rstest]
@@ -69,9 +73,7 @@ fn test_no_command() {
         .unwrap()
         .assert()
         .code(2)
-        .stderr(predicate::str::contains(
-            "CLI to track what you\'re working on",
-        ));
+        .stderr(predicate::str::contains("CLI to track what you\'re working on").count(1));
 }
 
 #[test]
@@ -83,9 +85,7 @@ fn test_list_empty() {
         .args(["list"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "There's nothing to do currently :)",
-        ));
+        .stdout(predicate::str::contains("There's nothing to do currently :)").count(1));
 }
 
 #[test]
@@ -97,9 +97,7 @@ fn test_list_alias_ls() {
         .args(["ls"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "There's nothing to do currently :)",
-        ));
+        .stdout(predicate::str::contains("There's nothing to do currently :)").count(1));
 }
 
 #[test]
@@ -113,7 +111,7 @@ fn test_add_todo_with_title() {
         .args(["add", "Test TODO"])
         .assert()
         .success()
-        .stdout(predicate::str::is_match(".+ created").unwrap());
+        .stdout(predicate::str::is_match(".+ created").unwrap().count(1));
 }
 
 #[test]
@@ -127,7 +125,7 @@ fn test_add_todo_without_title() {
     cmd.args(["add"])
         .assert()
         .success()
-        .stdout(predicate::str::is_match(".+ created").unwrap());
+        .stdout(predicate::str::is_match(".+ created").unwrap().count(1));
 }
 
 #[test]
@@ -157,8 +155,8 @@ fn test_add_and_list_todos() {
         .args(["list"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("First TODO"))
-        .stdout(predicate::str::contains("Second TODO"));
+        .stdout(predicate::str::contains("First TODO").count(1))
+        .stdout(predicate::str::contains("Second TODO").count(1));
 }
 
 #[test]
@@ -191,7 +189,7 @@ fn test_add_and_show_todo() {
         .args(["ls"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("First TODO"));
+        .stdout(predicate::str::contains("First TODO").count(1));
 
     // Complete the TODO via CLI
     Command::cargo_bin("workingon")
@@ -210,7 +208,7 @@ fn test_add_and_show_todo() {
         .args(["show", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("First TODO"))
+        .stdout(predicate::str::contains("First TODO").count(1))
         .stdout(predicate::str::contains("UTC").not());
 }
 
@@ -247,9 +245,9 @@ fn test_complete_and_reopen_todo() {
         .args(["complete", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "completed, if this was a mistake reopen with `",
-        ));
+        .stdout(
+            predicate::str::contains("completed, if this was a mistake reopen with `").count(1),
+        );
 
     // Verify it's completed by checking the database
     let connection = &mut workingon::establish_connection();
@@ -270,9 +268,9 @@ fn test_complete_and_reopen_todo() {
         .args(["reopen", &todo_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "reopened, if this was a mistake complete with `",
-        ));
+        .stdout(
+            predicate::str::contains("reopened, if this was a mistake complete with `").count(1),
+        );
 
     // Verify it's reopened by checking the database
     let reopened_results = todos
@@ -321,7 +319,7 @@ fn test_list_flags_precedence() {
         .args(["list"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Open TODO").count(1))
         .stdout(predicate::str::contains("Completed TODO").not());
 
     // Test 2: --open flag should show only open TODOs (same as default)
@@ -332,7 +330,7 @@ fn test_list_flags_precedence() {
         .args(["list", "--open"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Open TODO"))
+        .stdout(predicate::str::contains("Open TODO").count(1))
         .stdout(predicate::str::contains("Completed TODO").not());
 
     // Test 3: --completed flag should show only completed TODOs
@@ -344,7 +342,7 @@ fn test_list_flags_precedence() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Open TODO").not())
-        .stdout(predicate::str::contains("Completed TODO"));
+        .stdout(predicate::str::contains("Completed TODO").count(1));
 
     // Test 4: --all flag should show both completed and open TODOs
     Command::cargo_bin("workingon")
@@ -354,8 +352,8 @@ fn test_list_flags_precedence() {
         .args(["list", "--all"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Open TODO"))
-        .stdout(predicate::str::contains("Completed TODO"));
+        .stdout(predicate::str::contains("Open TODO").count(1))
+        .stdout(predicate::str::contains("Completed TODO").count(1));
 
     // Test 5: --all takes precedence over --completed
     Command::cargo_bin("workingon")
@@ -365,8 +363,8 @@ fn test_list_flags_precedence() {
         .args(["list", "--all", "--completed"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Open TODO"))
-        .stdout(predicate::str::contains("Completed TODO"));
+        .stdout(predicate::str::contains("Open TODO").count(1))
+        .stdout(predicate::str::contains("Completed TODO").count(1));
 
     // Test 6: --all takes precedence over --open
     Command::cargo_bin("workingon")
@@ -376,8 +374,8 @@ fn test_list_flags_precedence() {
         .args(["list", "--all", "--open"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Open TODO"))
-        .stdout(predicate::str::contains("Completed TODO"));
+        .stdout(predicate::str::contains("Open TODO").count(1))
+        .stdout(predicate::str::contains("Completed TODO").count(1));
 }
 
 #[test]
@@ -399,9 +397,7 @@ fn test_add_and_complete() {
         .args(["add", "--complete", "Completed TODO"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            "created and was subsequently completed",
-        ));
+        .stdout(predicate::str::contains("created and was subsequently completed").count(1));
 
     Command::cargo_bin("workingon")
         .unwrap()
@@ -419,7 +415,7 @@ fn test_add_and_complete() {
         .args(["list", "--completed"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Completed TODO"));
+        .stdout(predicate::str::contains("Completed TODO").count(1));
 }
 
 #[test]
@@ -450,8 +446,10 @@ fn test_set_duetime() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("is due at:"));
-    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
+        .stdout(predicate::str::contains("is due at:").count(1));
+    let updated_todo = get_todo(
+        &crate::encode_id(created_todo.id.try_into().unwrap()),
+    );
     // Make sure command changed database
     assert!(updated_todo.due.is_some());
     // Set no due date
@@ -465,7 +463,9 @@ fn test_set_duetime() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("is due at: no set time"));
-    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
+        .stdout(predicate::str::contains("is due at: no set time").count(1));
+    let updated_todo = get_todo(
+        &crate::encode_id(created_todo.id.try_into().unwrap()),
+    );
     assert!(updated_todo.due.is_none());
 }

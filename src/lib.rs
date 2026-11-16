@@ -4,7 +4,6 @@ pub mod models;
 pub mod schema;
 
 use chrono::*;
-use colored::Colorize;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -235,7 +234,7 @@ pub fn set_todo_notes(update_id: &String, new_notes: &String) {
         .unwrap_or_else(|_| panic!("notes of TODO: {} couldn't be updated", update_id));
 }
 
-pub fn reopen_todo(show_id: &String) {
+pub fn reopen_todo(show_id: &str) {
     use self::schema::todos::dsl::*;
     use chrono::DateTime;
     let connection = &mut establish_connection();
@@ -244,12 +243,6 @@ pub fn reopen_todo(show_id: &String) {
         .set(completed.eq(None::<DateTime<Utc>>))
         .execute(connection)
         .expect("TODO couldn't be reopened");
-    println!(
-        "{} reopened, if this was a mistake complete with `{} complete {}`",
-        show_id.yellow(),
-        BIN,
-        show_id
-    )
 }
 
 pub fn delete_todo(delete_id: &String) {
