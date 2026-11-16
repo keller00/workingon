@@ -174,11 +174,14 @@ fn test_add_and_show_todo() {
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    workingon::add_todo(&NewTodo {
-        title: "First TODO",
-        notes: "",
-        created: Utc::now(),
-    });
+    workingon::add_todo(
+        &mut establish_connection(),
+        &NewTodo {
+            title: "First TODO",
+            notes: "",
+            created: Utc::now(),
+        },
+    );
 
     // Get the TODO ID directly from the database
     let (todo_id, _todo) = get_latest_todo().expect("No todo found");
@@ -227,11 +230,14 @@ fn test_complete_and_reopen_todo() {
     std::env::set_var("EDITOR", "-");
 
     // Add a TODO using the library
-    workingon::add_todo(&NewTodo {
-        title: "Complete and Reopen Test TODO",
-        notes: "",
-        created: Utc::now(),
-    });
+    workingon::add_todo(
+        &mut establish_connection(),
+        &NewTodo {
+            title: "Complete and Reopen Test TODO",
+            notes: "",
+            created: Utc::now(),
+        },
+    );
 
     // Get the TODO ID directly from the database
     let (todo_id, todo) = get_latest_todo().expect("No todo found");
@@ -298,20 +304,26 @@ fn test_list_flags_precedence() {
     std::env::set_var("EDITOR", "-");
 
     // Add an open TODO
-    workingon::add_todo(&NewTodo {
-        title: "Open TODO",
-        notes: "",
-        created: Utc::now(),
-    });
+    workingon::add_todo(
+        &mut establish_connection(),
+        &NewTodo {
+            title: "Open TODO",
+            notes: "",
+            created: Utc::now(),
+        },
+    );
 
     // Add a completed TODO
-    workingon::add_todo(&NewTodo {
-        title: "Completed TODO",
-        notes: "",
-        created: Utc::now(),
-    });
+    workingon::add_todo(
+        &mut establish_connection(),
+        &NewTodo {
+            title: "Completed TODO",
+            notes: "",
+            created: Utc::now(),
+        },
+    );
     let (completed_todo_id, _) = get_latest_todo().expect("No todo found");
-    workingon::complete_todo(&completed_todo_id, None);
+    workingon::complete_todo(&mut establish_connection(), &completed_todo_id, None);
 
     // Test 1: Default (no flags) should show only open TODOs
     Command::cargo_bin("workingon")
@@ -433,11 +445,14 @@ fn test_set_duetime() {
     );
     std::env::set_var("EDITOR", "-");
 
-    let created_todo = workingon::add_todo(&NewTodo {
-        title: "test_set_duetime",
-        notes: "",
-        created: Utc::now(),
-    });
+    let created_todo = workingon::add_todo(
+        &mut establish_connection(),
+        &NewTodo {
+            title: "test_set_duetime",
+            notes: "",
+            created: Utc::now(),
+        },
+    );
     // Set same due date as in help message to make sure the example works
     Command::cargo_bin("workingon")
         .unwrap()
@@ -451,7 +466,10 @@ fn test_set_duetime() {
         .assert()
         .success()
         .stdout(predicate::str::contains("is due at:"));
-    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
+    let updated_todo = get_todo(
+        &mut establish_connection(),
+        &crate::encode_id(created_todo.id.try_into().unwrap()),
+    );
     // Make sure command changed database
     assert!(updated_todo.due.is_some());
     // Set no due date
@@ -466,6 +484,9 @@ fn test_set_duetime() {
         .assert()
         .success()
         .stdout(predicate::str::contains("is due at: no set time"));
-    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
+    let updated_todo = get_todo(
+        &mut establish_connection(),
+        &crate::encode_id(created_todo.id.try_into().unwrap()),
+    );
     assert!(updated_todo.due.is_none());
 }
