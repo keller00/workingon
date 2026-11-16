@@ -4,6 +4,7 @@ use crate::models::NewTodo;
 use chrono::{DateTime, Local, Utc};
 use clap::{Parser, Subcommand};
 use colored::{ColoredString, Colorize};
+use diesel::sqlite::SqliteConnection;
 use std::cmp::Ordering;
 
 #[derive(Parser)]
@@ -120,42 +121,43 @@ pub fn run_cli() {
             complete,
             due,
         } => {
-            add_todo(title, complete, due);
+            add_todo(&mut crate::establish_connection(), title, complete, due);
         }
         Commands::List {
             all,
             completed,
             open: _,
         } => {
+            let conn = &mut crate::establish_connection();
             // Priority: --all > --completed > default (--open)
             if all {
                 // Show all TODOs
-                list_todos(Some(false));
+                list_todos(conn, Some(false));
             } else if completed {
                 // Show only completed TODOs
-                list_todos(Some(true));
+                list_todos(conn, Some(true));
             } else {
                 // Default: show open (uncompleted) TODOs
-                list_todos(None);
+                list_todos(conn, None);
             }
         }
         Commands::Delete { id } => {
-            delete_todo(&id.to_string());
+            delete_todo(&mut crate::establish_connection(), &id.to_string());
         }
         Commands::Show { id } => {
-            show_todo(&id.to_string());
+            show_todo(&mut crate::establish_connection(), &id.to_string());
         }
         Commands::Edit { id } => {
-            edit_todo(id.to_string());
+            edit_todo(&mut crate::establish_connection(), id.to_string());
         }
         Commands::Complete { id } => {
-            complete_todo(&id);
+            complete_todo(&mut crate::establish_connection(), &id);
         }
         Commands::Reopen { id } => {
-            reopen_todo(&id);
+            reopen_todo(&mut crate::establish_connection(), &id);
         }
         Commands::Due { id, due_text } => {
-            set_due_todo(&id, due_text); // TODO: borrow due_text instead
+            set_due_todo(&mut crate::establish_connection(), &id, due_text); // TODO: borrow due_text instead
         }
     }
 }
@@ -207,8 +209,8 @@ fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String, precise
     }
 }
 
-fn show_todo(id: &String) {
-    let found_todo = crate::get_todo(id);
+fn show_todo(conn: &mut SqliteConnection, id: &String) {
+    let found_todo = crate::get_todo(conn, id);
     let created_str: String = format_datetime(found_todo.created, false);
     let completed_str: String =
         format_datetime_or_else(found_todo.completed, "not yet".to_string(), false);
@@ -219,8 +221,8 @@ fn show_todo(id: &String) {
     );
 }
 
-pub fn edit_todo(id: String) {
-    let found_todo = crate::get_todo(&id);
+pub fn edit_todo(conn: &mut SqliteConnection, id: String) {
+    let found_todo = crate::get_todo(conn, &id);
     let p_buff = crate::get_todoeditmsg_file();
     let fp = p_buff.as_path();
     let (t, n) = crate::create_temp_todo_file_open_and_then_read_remove_process(
@@ -228,13 +230,13 @@ pub fn edit_todo(id: String) {
         found_todo.title.clone(),
         found_todo.notes.clone(),
     );
-    crate::set_todo_title(&id, &t);
-    crate::set_todo_notes(&id, &n);
+    crate::set_todo_title(conn, &id, &t);
+    crate::set_todo_notes(conn, &id, &n);
     println!("{} updated", id.yellow());
 }
 
-fn complete_todo(id: &String) {
-    crate::complete_todo(id, None);
+fn complete_todo(conn: &mut SqliteConnection, id: &String) {
+    crate::complete_todo(conn, id, None);
     println!(
         "{} completed, if this was a mistake reopen with `{} reopen {}`",
         id.yellow(),
@@ -243,12 +245,12 @@ fn complete_todo(id: &String) {
     )
 }
 
-fn set_due_todo(id: &String, due_text: Option<String>) {
+fn set_due_todo(conn: &mut SqliteConnection, id: &String, due_text: Option<String>) {
     let mut due_ts: Option<DateTime<Utc>> = None;
     if let Some(due_str) = due_text {
         due_ts = Some(crate::parse_due_str(&due_str));
     }
-    crate::set_due(id, due_ts);
+    crate::set_due(conn, id, due_ts);
     println!(
         // TODO: add undo message
         "{} is due at: {}",
@@ -257,8 +259,8 @@ fn set_due_todo(id: &String, due_text: Option<String>) {
     )
 }
 
-fn reopen_todo(id: &String) {
-    crate::reopen_todo(id);
+fn reopen_todo(conn: &mut SqliteConnection, id: &String) {
+    crate::reopen_todo(conn, id);
     println!(
         "{} reopened, if this was a mistake complete with `{} complete {}`",
         id.yellow(),
@@ -267,12 +269,17 @@ fn reopen_todo(id: &String) {
     )
 }
 
-pub fn delete_todo(id: &String) {
-    crate::delete_todo(id);
+pub fn delete_todo(conn: &mut SqliteConnection, id: &String) {
+    crate::delete_todo(conn, id);
     println!("{} deleted", id.yellow());
 }
 
-pub fn add_todo(title: Option<String>, complete_after_creation: bool, due: Option<String>) {
+pub fn add_todo(
+    conn: &mut SqliteConnection,
+    title: Option<String>,
+    complete_after_creation: bool,
+    due: Option<String>,
+) {
     // TODO: There should be a way to supply body easily just like in `git commit -m ""`, but
     //  don't forget multiline messages with multiple -m's
     let title_str = match title {
@@ -291,16 +298,18 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool, due: Optio
         notes: notes.as_str(),
         created: Utc::now(),
     };
-    let created_todo = crate::add_todo(&new_todo);
+    let created_todo = crate::add_todo(conn, &new_todo);
     if let Some(due_text) = due {
         let due_ts = crate::parse_due_str(&due_text);
         crate::set_due(
+            conn,
             &crate::encode_id(created_todo.id.try_into().unwrap()),
             Some(due_ts),
         );
     }
     if complete_after_creation {
         crate::complete_todo(
+            conn,
             &crate::encode_id(created_todo.id.try_into().unwrap()),
             Some(created_todo.created),
         );
@@ -316,8 +325,8 @@ pub fn add_todo(title: Option<String>, complete_after_creation: bool, due: Optio
     );
 }
 
-pub fn list_todos(show_completed: Option<bool>) {
-    let mut results = crate::get_todos();
+pub fn list_todos(conn: &mut SqliteConnection, show_completed: Option<bool>) {
+    let mut results = crate::get_todos(conn);
     // show_completed parameter:
     // - None: show open (uncompleted) TODOs (default behavior)
     // - Some(true): show only completed TODOs
