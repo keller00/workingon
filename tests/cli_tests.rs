@@ -447,9 +447,7 @@ fn test_set_duetime() {
         .assert()
         .success()
         .stdout(predicate::str::contains("is due at:").count(1));
-    let updated_todo = get_todo(
-        &crate::encode_id(created_todo.id.try_into().unwrap()),
-    );
+    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
     // Make sure command changed database
     assert!(updated_todo.due.is_some());
     // Set no due date
@@ -464,8 +462,6 @@ fn test_set_duetime() {
         .assert()
         .success()
         .stdout(predicate::str::contains("is due at: no set time").count(1));
-    let updated_todo = get_todo(
-        &crate::encode_id(created_todo.id.try_into().unwrap()),
-    );
+    let updated_todo = get_todo(&crate::encode_id(created_todo.id.try_into().unwrap()));
     assert!(updated_todo.due.is_none());
 }
