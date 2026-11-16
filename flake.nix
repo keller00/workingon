@@ -31,8 +31,10 @@
           ];
 
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+          RUSTDOCPATH = "${pkgs.rustc.doc}/share/doc/docs/html";
 
           shellHook = ''
+            export MANPATH="${pkgs.rustc.man}/share/man:${pkgs.cargo}/share/man:$MANPATH"
             export LLVM_COV=${pkgs.llvm}/bin/llvm-cov
             export LLVM_PROFDATA=${pkgs.llvm}/bin/llvm-profdata
           '';
