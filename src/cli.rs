@@ -209,7 +209,7 @@ fn format_datetime_or_else(ts: Option<DateTime<Utc>>, else_item: String, precise
     }
 }
 
-fn show_todo(conn: &mut SqliteConnection, id: &String) {
+fn show_todo(conn: &mut SqliteConnection, id: &str) {
     let found_todo = crate::get_todo(conn, id);
     let created_str: String = format_datetime(found_todo.created, false);
     let completed_str: String =
@@ -235,7 +235,7 @@ pub fn edit_todo(conn: &mut SqliteConnection, id: String) {
     println!("{} updated", id.yellow());
 }
 
-fn complete_todo(conn: &mut SqliteConnection, id: &String) {
+fn complete_todo(conn: &mut SqliteConnection, id: &str) {
     crate::complete_todo(conn, id, None);
     println!(
         "{} completed, if this was a mistake reopen with `{} reopen {}`",
@@ -245,7 +245,7 @@ fn complete_todo(conn: &mut SqliteConnection, id: &String) {
     )
 }
 
-fn set_due_todo(conn: &mut SqliteConnection, id: &String, due_text: Option<String>) {
+fn set_due_todo(conn: &mut SqliteConnection, id: &str, due_text: Option<String>) {
     let mut due_ts: Option<DateTime<Utc>> = None;
     if let Some(due_str) = due_text {
         due_ts = Some(crate::parse_due_str(&due_str));
@@ -259,7 +259,7 @@ fn set_due_todo(conn: &mut SqliteConnection, id: &String, due_text: Option<Strin
     )
 }
 
-fn reopen_todo(conn: &mut SqliteConnection, id: &String) {
+fn reopen_todo(conn: &mut SqliteConnection, id: &str) {
     crate::reopen_todo(conn, id);
     println!(
         "{} reopened, if this was a mistake complete with `{} complete {}`",
@@ -269,7 +269,7 @@ fn reopen_todo(conn: &mut SqliteConnection, id: &String) {
     )
 }
 
-pub fn delete_todo(conn: &mut SqliteConnection, id: &String) {
+pub fn delete_todo(conn: &mut SqliteConnection, id: &str) {
     crate::delete_todo(conn, id);
     println!("{} deleted", id.yellow());
 }

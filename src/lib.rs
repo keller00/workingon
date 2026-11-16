@@ -22,7 +22,7 @@ use self::schema::todos;
 pub const COMMENT_DISCLAIMER: &str = "# This is a comment, lines starting with a # will be ignored";
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-fn parse_due_str(s: &String) -> DateTime<Utc> {
+fn parse_due_str(s: &str) -> DateTime<Utc> {
     chrono_english::parse_date_string(s, Local::now(), chrono_english::Dialect::Us)
         .expect("Parsing due date didn't work")
         .to_utc()
@@ -38,7 +38,7 @@ fn create_sqids_encoder_with_custom_alphabet() -> Sqids {
 
 pub fn encode_id(i: u64) -> String {
     create_sqids_encoder_with_custom_alphabet()
-        .encode(&vec![i])
+        .encode(&[i])
         .expect("Problem encoding id")
 }
 
@@ -167,7 +167,7 @@ pub fn add_todo(conn: &mut SqliteConnection, todo: &NewTodo) -> Todos {
         .expect("Error saving new TODO")
 }
 
-pub fn get_todo(conn: &mut SqliteConnection, get_id: &String) -> Todos {
+pub fn get_todo(conn: &mut SqliteConnection, get_id: &str) -> Todos {
     use self::schema::todos::dsl::*;
     let decoded_id = decode_id(get_id);
     todos
@@ -185,17 +185,17 @@ pub fn get_todos(conn: &mut SqliteConnection) -> Vec<Todos> {
         .expect("Was unable to get all TODOs")
 }
 
-pub fn complete_todo(conn: &mut SqliteConnection, show_id: &String, ts: Option<DateTime<Utc>>) {
+pub fn complete_todo(conn: &mut SqliteConnection, show_id: &str, ts: Option<DateTime<Utc>>) {
     use self::schema::todos::dsl::*;
     let decoded_id = decode_id(show_id);
-    let completion_ts = ts.unwrap_or_else(|| Utc::now());
+    let completion_ts = ts.unwrap_or_else(Utc::now);
     diesel::update(todos.find(decoded_id))
         .set(completed.eq(completion_ts))
         .execute(conn)
         .unwrap_or_else(|_| panic!("TODO: {} couldn't be completed", show_id));
 }
 
-pub fn set_due(conn: &mut SqliteConnection, show_id: &String, ts: Option<DateTime<Utc>>) {
+pub fn set_due(conn: &mut SqliteConnection, show_id: &str, ts: Option<DateTime<Utc>>) {
     use self::schema::todos::dsl::*;
     let decoded_id = decode_id(show_id);
     diesel::update(todos.find(decoded_id))
@@ -213,7 +213,7 @@ pub fn set_due(conn: &mut SqliteConnection, show_id: &String, ts: Option<DateTim
         });
 }
 
-pub fn set_todo_title(conn: &mut SqliteConnection, update_id: &String, new_title: &String) {
+pub fn set_todo_title(conn: &mut SqliteConnection, update_id: &str, new_title: &str) {
     use self::schema::todos::dsl::*;
     let decoded_id = decode_id(update_id);
     diesel::update(todos.find(decoded_id))
@@ -222,7 +222,7 @@ pub fn set_todo_title(conn: &mut SqliteConnection, update_id: &String, new_title
         .unwrap_or_else(|_| panic!("title of TODO: {} couldn't be updated", update_id));
 }
 
-pub fn set_todo_notes(conn: &mut SqliteConnection, update_id: &String, new_notes: &String) {
+pub fn set_todo_notes(conn: &mut SqliteConnection, update_id: &str, new_notes: &str) {
     use self::schema::todos::dsl::*;
     let decoded_id = decode_id(update_id);
     diesel::update(todos.find(decoded_id))
@@ -241,7 +241,7 @@ pub fn reopen_todo(conn: &mut SqliteConnection, show_id: &str) {
         .expect("TODO couldn't be reopened");
 }
 
-pub fn delete_todo(conn: &mut SqliteConnection, delete_id: &String) {
+pub fn delete_todo(conn: &mut SqliteConnection, delete_id: &str) {
     use self::schema::todos::dsl::*;
     let decoded_id = decode_id(delete_id);
     diesel::delete(todos.filter(id.eq(decoded_id)))

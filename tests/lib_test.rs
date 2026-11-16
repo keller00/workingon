@@ -125,9 +125,9 @@ fn test_get_editor_without_env_var() {
 fn test_establish_connection() {
     let _tmp_dir = setup_test_env();
 
-    let _connection = establish_connection();
-    // If we get here without panicking, the connection was established successfully
-    assert!(true);
+    let connection = &mut establish_connection();
+    assert!(get_db_file().exists());
+    assert!(get_todos(connection).is_empty());
 
     cleanup_test_env();
 }
