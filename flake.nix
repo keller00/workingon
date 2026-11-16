@@ -30,6 +30,8 @@
             sqlite
           ];
 
+          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+
           shellHook = ''
             export LLVM_COV=${pkgs.llvm}/bin/llvm-cov
             export LLVM_PROFDATA=${pkgs.llvm}/bin/llvm-profdata
